@@ -1,0 +1,8 @@
+server:
+  port: "8080"
+
+db:
+  port: "5432"
+  username: "trailblazer_user1"
+  dbname: "trailblazerDB"
+  sslmode: "disable"
