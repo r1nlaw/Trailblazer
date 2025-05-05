@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -13,7 +14,6 @@ import (
 	"trailblazer/internal/service"
 	"trailblazer/internal/service/hash"
 	"trailblazer/internal/service/token"
-	logging "trailblazer/pkg"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
@@ -29,12 +29,8 @@ func init() {
 
 func main() {
 	if err := godotenv.Load(); err != nil {
-		logging.Logger.Warn(logging.MakeLog("failed to load env file", err))
+		slog.Warn("failed to load env file", err)
 		return
-	}
-
-	if err := logging.NewLogService(os.Stdout, os.Getenv("LOG_MODE")); err != nil {
-		log.Fatal("Failed to initialize logger: ", err)
 	}
 
 	db, err := repository.InitDB(repository.Config{
@@ -46,33 +42,33 @@ func main() {
 		SSLMode:  viper.GetString("db.sslmode"),
 	})
 	if err != nil {
-		logging.Logger.Warn(logging.MakeLog("failed to initialize DB", err))
+		slog.Warn("failed to initialize DB", err)
 		return
 	}
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
-		logging.Logger.Warn(logging.MakeLog("JWT_SECRET must be set", err))
+		slog.Warn("JWT_SECRET must be set", err)
 		return
 	}
 	tokenMaker, err := token.NewJWTMaker(secret)
 	if err != nil {
-		logging.Logger.Warn(logging.MakeLog("failed to initialize tokenMaker", err))
+		slog.Warn("failed to initialize tokenMaker", err)
 		return
 	}
 
 	hashUtil := hash.NewBcryptHasher()
 	ctx := context.Background()
 	repo := repository.NewRepository(ctx, db)
-	logging.Logger.Info("initializing repository")
+	slog.Info("initializing repository")
 	services := service.NewService(ctx, repo, tokenMaker, hashUtil)
-	logging.Logger.Info("initializing services")
+	slog.Info("initializing services")
 	handlers := handler.NewHandler(services)
 	app := fiber.New()
 
 	handlers.InitRoutes(app)
 	go func() {
 		if err := app.Listen(":" + viper.GetString("server.port")); err != nil {
-			logging.Logger.Warn(logging.MakeLog("error starting server", err))
+			slog.Warn("error starting server", err)
 		}
 	}()
 
@@ -82,8 +78,8 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := app.Shutdown(); err != nil {
-		logging.Logger.Warn(logging.MakeLog("error shutting down server", err))
+		slog.Warn("error shutting down server", err)
 	}
 
-	logging.Logger.Info("Server stopped successfully")
+	slog.Info("Server stopped successfully")
 }

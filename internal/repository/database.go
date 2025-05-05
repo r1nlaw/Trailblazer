@@ -1,9 +1,9 @@
 package repository
 
 import (
+	"errors"
 	"fmt"
 	"log"
-	"os"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
@@ -28,18 +28,9 @@ func InitDB(cfg Config) (*sqlx.DB, error) {
 		log.Fatal("error to read env file")
 	}
 
-	conf := Config{
-		Host:     os.Getenv("DB_HOST"),
-		Port:     os.Getenv("DB_PORT"),
-		Username: os.Getenv("DB_USER"),
-		Password: os.Getenv("DB_PASSWORD"),
-		DBName:   os.Getenv("DB_NAME"),
-		SSLMode:  os.Getenv("DB_SSLMOD"),
-	}
-
 	connectStr := fmt.Sprintf(
 		"host=%s port=%s user=%s dbname=%s password=%s sslmode=%s",
-		conf.Host, conf.Port, conf.Username, conf.DBName, conf.Password, conf.SSLMode,
+		cfg.Host, cfg.Port, cfg.Username, cfg.DBName, cfg.Password, cfg.SSLMode,
 	)
 
 	db, err := sqlx.Connect("postgres", connectStr)
@@ -58,13 +49,13 @@ func InitDB(cfg Config) (*sqlx.DB, error) {
 
 	m, err := migrate.NewWithDatabaseInstance(
 		"file://./schema",
-		conf.DBName, driver,
+		cfg.DBName, driver,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create migrate instance: %w", err)
 	}
 
-	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return nil, fmt.Errorf("failed to apply migrations: %w", err)
 	}
 
