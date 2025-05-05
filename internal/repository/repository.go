@@ -2,9 +2,8 @@ package repository
 
 import (
 	"context"
-	"trailblazer/internal/models"
 
-	"github.com/jmoiron/sqlx"
+	"trailblazer/internal/models"
 )
 
 type User interface {
@@ -12,12 +11,10 @@ type User interface {
 	AddUser(ctx context.Context, userData models.User) error
 }
 
+type Landmark interface {
+	SaveLandmark(ctx context.Context, landmark *models.Landmark) error
+}
 type Repository struct {
 	User
-}
-
-func NewRepository(ctx context.Context, db *sqlx.DB) *Repository {
-	return &Repository{
-		User: NewUserPostgres(ctx, db),
-	}
+	Landmark
 }

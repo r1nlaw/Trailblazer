@@ -2,13 +2,15 @@ package main
 
 import (
 	"context"
-	"log"
+	"flag"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"trailblazer/internal/config"
 	"trailblazer/internal/handler"
 	"trailblazer/internal/repository"
 	"trailblazer/internal/service"
@@ -16,31 +18,24 @@ import (
 	"trailblazer/internal/service/token"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/joho/godotenv"
-	"github.com/spf13/viper"
 )
 
-func init() {
-	viper.SetConfigFile("./configs/config.yml")
-	if err := viper.ReadInConfig(); err != nil {
-		log.Fatalf("Error reading config: %v", err)
-	}
+func InitLogger() *slog.Logger {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	return logger
 }
-
 func main() {
-	if err := godotenv.Load(); err != nil {
-		slog.Warn("failed to load env file", err)
-		return
-	}
+	logger := InitLogger()
+	slog.SetDefault(logger)
 
-	db, err := repository.InitDB(repository.Config{
-		Host:     os.Getenv("DB_HOST"),
-		Port:     viper.GetString("db.port"),
-		Username: viper.GetString("db.username"),
-		Password: os.Getenv("DB_PASSWORD"),
-		DBName:   viper.GetString("db.dbname"),
-		SSLMode:  viper.GetString("db.sslmode"),
-	})
+	configPath := flag.String("c", "config/config.yaml", "The path to the configuration file")
+	flag.Parse()
+	cfg, err := config.New(*configPath)
+	if err != nil {
+		slog.Error(fmt.Sprintf("error to parse config: %v", err))
+	}
+	var repo *repository.Repository
+	repo, err = repository.NewPostgresRepository(context.Background(), cfg.DatabaseConfig)
 	if err != nil {
 		slog.Warn("failed to initialize DB", err)
 		return
@@ -58,7 +53,6 @@ func main() {
 
 	hashUtil := hash.NewBcryptHasher()
 	ctx := context.Background()
-	repo := repository.NewRepository(ctx, db)
 	slog.Info("initializing repository")
 	services := service.NewService(ctx, repo, tokenMaker, hashUtil)
 	slog.Info("initializing services")
@@ -67,7 +61,7 @@ func main() {
 
 	handlers.InitRoutes(app)
 	go func() {
-		if err := app.Listen(":" + viper.GetString("server.port")); err != nil {
+		if err := app.Listen(":" + cfg.HostConfig.Port); err != nil {
 			slog.Warn("error starting server", err)
 		}
 	}()

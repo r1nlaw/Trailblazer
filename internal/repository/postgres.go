@@ -1,9 +1,12 @@
 package repository
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
+
+	"trailblazer/internal/config"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
@@ -13,16 +16,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
-type Config struct {
-	Host     string
-	Port     string
-	Username string
-	Password string
-	DBName   string
-	SSLMode  string
-}
-
-func InitDB(cfg Config) (*sqlx.DB, error) {
+func NewPostgresDB(cfg config.DatabaseConfig) (*sqlx.DB, error) {
 
 	if err := godotenv.Load("./.env"); err != nil {
 		log.Fatal("error to read env file")
@@ -60,4 +54,16 @@ func InitDB(cfg Config) (*sqlx.DB, error) {
 	}
 
 	return db, nil
+}
+
+func NewPostgresRepository(ctx context.Context, cfg config.DatabaseConfig) (*Repository, error) {
+	db, err := NewPostgresDB(cfg)
+	if err != nil {
+		return nil, err
+	}
+	userDb := NewUserPostgres(ctx, db)
+	repository := &Repository{
+		User: userDb,
+	}
+	return repository, nil
 }
