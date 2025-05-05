@@ -6,3 +6,11 @@ db:
   username: "trailblazer_user1"
   dbname: "trailblazerDB"
   sslmode: "disable"
+
+
+parser:
+  is_production: false
+  base_url: ""
+geocoder:
+  url:
+  api_key:
