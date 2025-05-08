@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"trailblazer/internal/config"
 )
 
 type GeocodingClient struct {
