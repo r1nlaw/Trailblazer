@@ -28,7 +28,7 @@ func main() {
 	logger := InitLogger()
 	slog.SetDefault(logger)
 
-	configPath := flag.String("c", "config/config.yaml", "The path to the configuration file")
+	configPath := flag.String("c", "configs/config.yml", "The path to the configuration file")
 	flag.Parse()
 	cfg, err := config.New(*configPath)
 	if err != nil {

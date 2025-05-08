@@ -12,7 +12,7 @@ type User interface {
 }
 
 type Landmark interface {
-	SaveLandmark(ctx context.Context, landmark *models.Landmark) error
+	SaveLandmarks(ctx context.Context, landmarks []*models.Landmark) error
 }
 type Repository struct {
 	User

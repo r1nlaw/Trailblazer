@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+
+	"trailblazer/internal/config"
 	"trailblazer/internal/models"
 	"trailblazer/internal/repository"
 	"trailblazer/internal/service/hash"
@@ -15,19 +17,27 @@ type Service struct {
 	ctx        context.Context
 	tokenMaker token.Maker
 	hashUtil   hash.Hasher
+	LandmarkService
 }
 
 type UserService interface {
 	SignUp(c *fiber.Ctx) error
 	SignIn(c *fiber.Ctx) error
 }
+type LandmarkService interface {
+	Crawl() error
+	SaveLandmarks(c context.Context, landmarks []*models.Landmark) error
+	SetCookies() error
+	GetHtml(link string) string
+}
 
-func NewService(ctx context.Context, repository *repository.Repository, tokenMaker token.Maker, hashUtil hash.Hasher) *Service {
+func NewService(ctx context.Context, repository *repository.Repository, tokenMaker token.Maker, hashUtil hash.Hasher, cfg config.Config) *Service {
 	return &Service{
-		repository: repository,
-		ctx:        ctx,
-		tokenMaker: tokenMaker,
-		hashUtil:   hashUtil,
+		repository:      repository,
+		ctx:             ctx,
+		tokenMaker:      tokenMaker,
+		hashUtil:        hashUtil,
+		LandmarkService: NewLandmarkService(repository.Landmark, cfg.ParserConfig),
 	}
 }
 

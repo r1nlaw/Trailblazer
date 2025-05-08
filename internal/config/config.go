@@ -20,6 +20,7 @@ type HostConfig struct {
 }
 
 type DatabaseConfig struct {
+	Dir      string
 	Host     string
 	Port     string
 	Username string
@@ -54,6 +55,7 @@ func New(path string) (*Config, error) {
 		Password: os.Getenv("DB_PASSWORD"),
 		DBName:   viper.GetString("db.dbname"),
 		SSLMode:  viper.GetString("db.sslmode"),
+		Dir:      viper.GetString("db.dir"),
 	}
 	cfg.HostConfig = HostConfig{
 		Port: viper.GetString("server.port"),

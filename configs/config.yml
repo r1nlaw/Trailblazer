@@ -2,6 +2,7 @@ server:
   port: "8080"
 
 db:
+  dir: "./landmarks/landmark.json"
   port: "5432"
   username: "trailblazer_user1"
   dbname: "trailblazerDB"
@@ -10,7 +11,7 @@ db:
 
 parser:
   is_production: false
-  base_url: ""
+  base_url: "https://www.kp.ru/russia/krym/dostoprimechatelnosti/"
 geocoder:
   url:
   api_key:

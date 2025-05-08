@@ -10,6 +10,7 @@ type Landmark struct {
 	Schedules   []Schedule `json:"schedules"`
 	Prices      []Price    `json:"prices"`
 	Description string     `json:"description"`
+	History     string     `json:"history"`
 	Location    `json:"location"`
 }
 
@@ -19,8 +20,9 @@ type Schedule struct {
 	Description string    `json:"description"`
 }
 type Price struct {
-	Value    float64 `json:"value"`
-	Currency string  `json:"currency"`
+	Value       float64 `json:"value"`
+	Currency    string  `json:"currency"`
+	Description string  `json:"description"`
 }
 
 type Location struct {
