@@ -4,81 +4,84 @@ from sklearn.metrics.pairwise import cosine_similarity
 from PIL import Image
 from transformers import CLIPProcessor, CLIPModel
 import numpy as np
+from collections import defaultdict
+from flask import Flask, request, jsonify
+import tempfile
 
-# Получаем текущую рабочую директорию
+app = Flask(__name__)
+
 current_directory = os.getcwd()
-
-# Формируем пути относительно текущей директории
-query_folder = os.path.join(current_directory, "input_images")  # Папка с изображениями для сравнения
-embeddings_folder = os.path.join(current_directory, "references")  # Папка с предвычисленными эмбеддингами
-
-# Выбор устройства
+embeddings_folder = os.path.join(current_directory, "references")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Загрузка модели CLIP
+# Загрузка модели
 model = CLIPModel.from_pretrained("openai/clip-vit-large-patch14").to(device)
 processor = CLIPProcessor.from_pretrained("openai/clip-vit-large-patch14", use_fast=True)
 
-# Функция для получения эмбеддинга изображения
+
 def get_clip_embedding(image_path):
     image = Image.open(image_path).convert("RGB")
     inputs = processor(images=image, return_tensors="pt").to(device)
-
     with torch.no_grad():
         embedding = model.get_image_features(**inputs)
-        embedding = embedding / embedding.norm(dim=-1, keepdim=True)  # Нормализация
+        embedding = embedding / embedding.norm(dim=-1, keepdim=True)
     return embedding.cpu().numpy()
 
-# Функция для загрузки эмбеддингов из файлов
-def load_embeddings_from_files(embeddings_folder):
+def load_embeddings_from_files(folder):
     embeddings = {}
-    for file_name in os.listdir(embeddings_folder):
-        file_path = os.path.join(embeddings_folder, file_name)
-        if file_path.endswith('.npy'):  # Проверка на формат .npy для эмбеддингов
-            embedding = np.load(file_path)
-            embeddings[file_name] = embedding
+    for file_name in os.listdir(folder):
+        if file_name.endswith('.npy'):
+            path = os.path.join(folder, file_name)
+            embeddings[file_name] = np.load(path)
     return embeddings
 
-# Функция сравнения изображения с эмбеддингами
-def compare_images_with_embeddings(query_folder, embeddings_folder, similarity_threshold=0.80):
-    # Загружаем эмбеддинги из папки
-    embeddings = load_embeddings_from_files(embeddings_folder)
+# Проверка на соответствие целевой достопримечательности
+def verify_target_landmark(query_embedding, target_landmark, embeddings, threshold=0.80, min_match_count=3):
+    matches = []
 
-    # Перебираем все изображения в query_folder
-    for query_image_name in os.listdir(query_folder):
-        query_image_path = os.path.join(query_folder, query_image_name)
+    for file_name, ref_embedding in embeddings.items():
+        base_name = os.path.splitext(os.path.splitext(file_name)[0])[0]
+        landmark_name = base_name.split("__")[0]
 
-        if query_image_path.lower().endswith(('.jpg', '.jpeg', '.png')):
+        if landmark_name.lower() != target_landmark.lower():
+            continue
 
-            print(f"\nСравнение для изображения: {query_image_name}")
-            
-            # Получаем эмбеддинг для изображения
-            query_embedding = get_clip_embedding(query_image_path)
+        similarity = cosine_similarity(query_embedding, ref_embedding)[0][0]
+        if similarity >= threshold:
+            matches.append(similarity)
 
-            # Сравниваем с эмбеддингами из папки
-            similarities = []
-            for ref_name, ref_embedding in embeddings.items():
-                similarity = cosine_similarity(query_embedding, ref_embedding)[0][0]
-                similarities.append((ref_name, similarity))
+    print(f"[{target_landmark}] найдено совпадений: {len(matches)}")
 
-            # Сортируем по схожести
-            similarities.sort(key=lambda x: x[1], reverse=True)
+    return len(matches) >= min_match_count
 
-            # Выводим топ-3 самых схожих изображений
-            print("Топ-5 схожих изображений:")
+@app.route("/verify", methods=["POST"])
+def verify():
+    target = request.args.get("target")
+    if not target:
+        return jsonify({"error": "Missing ?target= parameter"}), 400
 
-            # Проверяем, все ли топ-3 изображений имеют схожесть выше порога
-            all_similar = True
-            for image_name, similarity in similarities[:3]:
-                print(f"{image_name}: {similarity * 100:.2f}% схожести")
-                if similarity < similarity_threshold:
-                    all_similar = False
+    if "image" not in request.files:
+        return jsonify({"error": "Missing image file"}), 400
 
-            # Если все 3 изображений имеют схожесть выше порога, считаем изображение схожим
-            if all_similar:
-                print("  --> СОВПАДАЕТ (все 3 изображения схожи на 80% и выше)")
-            else:
-                print("  --> НЕ СОВПАДАЕТ (не все изображения в топ-5 схожи на 80%)")
+    image_file = request.files["image"]
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp:
+        image_path = tmp.name
+        image_file.save(image_path)
 
-# Выполнение функции сравнения
-compare_images_with_embeddings(query_folder, embeddings_folder)
+    try:
+        query_embedding = get_clip_embedding(image_path)
+        embeddings = load_embeddings_from_files(embeddings_folder)
+
+        matched = verify_target_landmark(
+            query_embedding, target_landmark=target, embeddings=embeddings
+        )
+
+        if matched:
+            return jsonify({"result": "Match"}), 200
+        else:
+            return jsonify({"result": "Does not match"}), 400
+    finally:
+        os.remove(image_path)
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8005, debug=True)

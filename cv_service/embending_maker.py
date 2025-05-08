@@ -37,7 +37,7 @@ def save_embeddings(image_folder, output_folder):
     return embeddings
 
 # Пример использования
-image_folder = r"A:\trailblazer\cv_service\references\ekaterina_2"  # Папка с изображениями
+image_folder = r"A:\trailblazer\cv_service\references\dataset"  # Папка с изображениями
 output_folder = r"A:\trailblazer\cv_service\references"  # Папка для сохранения эмбеддингов
 
 os.makedirs(output_folder, exist_ok=True)
