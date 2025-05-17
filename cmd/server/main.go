@@ -54,7 +54,7 @@ func main() {
 	hashUtil := hash.NewBcryptHasher()
 	ctx := context.Background()
 	slog.Info("initializing repository")
-	services := service.NewService(ctx, repo, tokenMaker, hashUtil)
+	services := service.NewService(ctx, repo, tokenMaker, hashUtil, *cfg)
 	slog.Info("initializing services")
 	handlers := handler.NewHandler(services)
 	app := fiber.New()

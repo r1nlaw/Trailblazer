@@ -12,7 +12,8 @@ type User interface {
 }
 
 type Landmark interface {
-	SaveLandmarks(ctx context.Context, landmarks []*models.Landmark) error
+	GetFacilities(bbox models.BBOX) ([]models.Landmark, error)
+	GetLandmarks(page int) ([]models.Landmark, error)
 }
 type Repository struct {
 	User

@@ -17,12 +17,18 @@ func NewHandler(service *service.Service) *Handler {
 
 func (h *Handler) InitRoutes(app *fiber.App) {
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:8081",
+		AllowOrigins:     "http://localhost:5173/",
 		AllowMethods:     "GET, POST, PUT, DELETE",
 		AllowHeaders:     "Content-Type, Authorization",
 		AllowCredentials: true,
 	}))
-
-	app.Post("/TrailBlazer/signIn", h.service.SignIn)
-	app.Post("/TrailBlazer/signUp", h.service.SignUp)
+	user := app.Group("/user")
+	user.Post("/signIn", h.service.SignIn)
+	user.Post("/signUp", h.service.SignUp)
+	api := app.Group("/api")
+	api.Use(cors.New(cors.Config{
+		AllowOrigins:     "*",
+		AllowCredentials: false,
+	})).Post("/facilities", h.facilities)
+	api.Get("/landmark", h.getLandmarks)
 }
