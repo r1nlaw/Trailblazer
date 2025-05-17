@@ -35,3 +35,16 @@ func (h *Handler) getLandmarks(ctx *fiber.Ctx) error {
 	return ctx.JSON(landmarks)
 
 }
+
+func (h *Handler) getLandmarksByIDs(ctx *fiber.Ctx) error {
+	var req []int
+	if err := ctx.BodyParser(&req); err != nil {
+
+		return ctx.JSON(fiber.Map{"error": err.Error()})
+	}
+	points, err := h.service.GetLandmarksByIDs(req)
+	if err != nil {
+		return ctx.JSON(fiber.Map{"error": err.Error})
+	}
+	return ctx.JSON(points)
+}

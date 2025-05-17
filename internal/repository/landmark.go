@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"trailblazer/internal/models"
 	"trailblazer/internal/utils"
@@ -74,6 +76,50 @@ func (l *LandmarkDB) GetLandmarks(page int) ([]models.Landmark, error) {
 	for rows.Next() {
 		f, p := models.Landmark{}, ""
 		err := rows.Scan(&f.ID, &f.Name, &f.Address, &f.Category, &f.Description, &f.History, &p)
+		if err != nil {
+			return []models.Landmark{}, err
+
+		}
+		f.Location = utils.LocationFromPoint(p)
+		landmarks = append(landmarks, f)
+	}
+	return landmarks, nil
+}
+
+func (l *LandmarkDB) GetLandmarksByIDs(ids []any) ([]models.Landmark, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	placeholders := make([]string, len(ids))
+	args := make([]interface{}, len(ids))
+	for i, id := range ids {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id
+	}
+
+	query := fmt.Sprintf(`
+		SELECT
+			landmark.id,
+			landmark.name,
+			landmark.address,
+			landmark.category,
+			landmark.description,
+			landmark.history,
+			ST_AsText(landmark.location) AS loc
+		FROM landmark
+		WHERE id IN (%s)
+	`, strings.Join(placeholders, ","))
+	res, err := l.postgres.Query(query, ids...)
+	if err != nil {
+		return []models.Landmark{}, err
+	}
+	defer res.Close()
+
+	var landmarks []models.Landmark
+	for res.Next() {
+		f, p := models.Landmark{}, ""
+		err := res.Scan(&f.ID, &f.Name, &f.Address, &f.Category, &f.Description, &f.History, &p)
 		if err != nil {
 			return []models.Landmark{}, err
 
