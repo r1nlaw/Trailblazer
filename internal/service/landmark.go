@@ -30,3 +30,12 @@ func (s *Landmark) GetFacilities(bbox models.BBOX) ([]models.Landmark, error) {
 func (s *Landmark) GetLandmarks(page int) ([]models.Landmark, error) {
 	return s.repo.GetLandmarks(page)
 }
+
+func (s *Landmark) GetLandmarksByIDs(ids []int) ([]models.Landmark, error) {
+	ID := make([]any, len(ids))
+	for i, id := range ids {
+		ID[i] = id
+	}
+	return s.repo.GetLandmarksByIDs(ID)
+
+}

@@ -14,6 +14,7 @@ type User interface {
 type Landmark interface {
 	GetFacilities(bbox models.BBOX) ([]models.Landmark, error)
 	GetLandmarks(page int) ([]models.Landmark, error)
+	GetLandmarksByIDs(ids []any) ([]models.Landmark, error)
 }
 type Repository struct {
 	User

@@ -5,6 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/logger"
 )
 
 type Handler struct {
@@ -22,6 +23,10 @@ func (h *Handler) InitRoutes(app *fiber.App) {
 		AllowHeaders:     "Content-Type, Authorization",
 		AllowCredentials: true,
 	}))
+
+	app.Use(logger.New(logger.Config{
+		Format: "[${ip}]:${port} ${status} - ${method} ${path} - ${ua}\\n\n",
+	}))
 	user := app.Group("/user")
 	user.Post("/signIn", h.service.SignIn)
 	user.Post("/signUp", h.service.SignUp)
@@ -31,4 +36,5 @@ func (h *Handler) InitRoutes(app *fiber.App) {
 		AllowCredentials: false,
 	})).Post("/facilities", h.facilities)
 	api.Get("/landmark", h.getLandmarks)
+	api.Post("/getLandmarks", h.getLandmarksByIDs)
 }
