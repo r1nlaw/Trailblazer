@@ -14,6 +14,7 @@ type Landmark struct {
 	Description string     `json:"description"`
 	History     string     `json:"history"`
 	Location    `json:"location"`
+	ImagePath   string `json:"image_path"`
 }
 type Schedule struct {
 	Start       time.Time `json:"start"`

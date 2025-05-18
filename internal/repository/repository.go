@@ -15,6 +15,8 @@ type Landmark interface {
 	GetFacilities(bbox models.BBOX) ([]models.Landmark, error)
 	GetLandmarks(page int) ([]models.Landmark, error)
 	GetLandmarksByIDs(ids []any) ([]models.Landmark, error)
+	Search(q string) ([]models.Landmark, error)
+	UpdateImagePath(place string, path string) error
 }
 type Repository struct {
 	User

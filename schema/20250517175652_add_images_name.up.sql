@@ -1,0 +1,1 @@
+ALTER TABLE landmark ADD COLUMN images_name text;
