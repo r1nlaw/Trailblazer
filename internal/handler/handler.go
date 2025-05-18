@@ -1,6 +1,9 @@
 package handler
 
 import (
+	"log/slog"
+	"os"
+
 	"trailblazer/internal/service"
 
 	"github.com/gofiber/fiber/v2"
@@ -18,15 +21,18 @@ func NewHandler(service *service.Service) *Handler {
 
 func (h *Handler) InitRoutes(app *fiber.App) {
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:5173/",
-		AllowMethods:     "GET, POST, PUT, DELETE",
-		AllowHeaders:     "Content-Type, Authorization",
-		AllowCredentials: true,
+		AllowOrigins: "*",
+		AllowMethods: "GET, POST, PUT, DELETE",
+		AllowHeaders: "Content-Type, Authorization",
 	}))
+	if _, err := os.Stat("./images"); os.IsNotExist(err) {
+		slog.Info("Директория ./images не существует")
+	}
 
 	app.Use(logger.New(logger.Config{
 		Format: "[${ip}]:${port} ${status} - ${method} ${path} - ${ua}\\n\n",
 	}))
+	app.Static("/images", "images")
 	user := app.Group("/user")
 	user.Post("/signIn", h.service.SignIn)
 	user.Post("/signUp", h.service.SignUp)

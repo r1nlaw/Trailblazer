@@ -78,9 +78,15 @@ func main() {
 			`"`, ``,
 		)
 		translator = replacer.Replace(translator)
+
 		err = services.LandmarkService.UpdateImagePath(fileName, translator+ext)
+
 		if err != nil {
 			slog.Error("failed to update image path", err)
+		}
+		err = os.Rename("images/"+fileName+ext, "images/"+translator+ext)
+		if err != nil {
+			slog.Error("failed to rename image file", err)
 		}
 		fmt.Println(translator)
 
