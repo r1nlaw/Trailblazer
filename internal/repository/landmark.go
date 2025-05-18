@@ -28,7 +28,8 @@ func (l *LandmarkDB) GetFacilities(bbox models.BBOX) ([]models.Landmark, error) 
 			landmark.id,
 			landmark.name,
 			landmark.address,
-			st_astext(landmark.location) as loc
+			st_astext(landmark.location) as loc,
+			landmark.images_name
 		FROM landmark        
 	  	WHERE ST_Intersects(ST_MakeEnvelope($1,$2,$3,$4,4326 ), landmark.location::geometry)
 	  `
@@ -41,7 +42,7 @@ func (l *LandmarkDB) GetFacilities(bbox models.BBOX) ([]models.Landmark, error) 
 	var facilities []models.Landmark
 	for rows.Next() {
 		f, p := models.Landmark{}, ""
-		err := rows.Scan(&f.ID, &f.Name, &f.Address, &p)
+		err := rows.Scan(&f.ID, &f.Name, &f.Address, &p, &f.ImagePath)
 		if err != nil {
 			return []models.Landmark{}, err
 		}
@@ -62,7 +63,8 @@ func (l *LandmarkDB) GetLandmarks(page int) ([]models.Landmark, error) {
 				landmark.category,
 				landmark.description,
 				landmark.history,
-				st_astext(landmark.location) as loc				
+				st_astext(landmark.location) as loc		,
+				landmark.images_name
 			    FROM landmark
 			LIMIT $1 OFFSET $2
 		`
@@ -75,7 +77,7 @@ func (l *LandmarkDB) GetLandmarks(page int) ([]models.Landmark, error) {
 	var landmarks []models.Landmark
 	for rows.Next() {
 		f, p := models.Landmark{}, ""
-		err := rows.Scan(&f.ID, &f.Name, &f.Address, &f.Category, &f.Description, &f.History, &p)
+		err := rows.Scan(&f.ID, &f.Name, &f.Address, &f.Category, &f.Description, &f.History, &p, &f.ImagePath)
 		if err != nil {
 			return []models.Landmark{}, err
 
@@ -106,7 +108,8 @@ func (l *LandmarkDB) GetLandmarksByIDs(ids []any) ([]models.Landmark, error) {
 			landmark.category,
 			landmark.description,
 			landmark.history,
-			ST_AsText(landmark.location) AS loc
+			ST_AsText(landmark.location) AS loc,
+			landmark.images_name
 		FROM landmark
 		WHERE id IN (%s)
 	`, strings.Join(placeholders, ","))
@@ -119,7 +122,7 @@ func (l *LandmarkDB) GetLandmarksByIDs(ids []any) ([]models.Landmark, error) {
 	var landmarks []models.Landmark
 	for res.Next() {
 		f, p := models.Landmark{}, ""
-		err := res.Scan(&f.ID, &f.Name, &f.Address, &f.Category, &f.Description, &f.History, &p)
+		err := res.Scan(&f.ID, &f.Name, &f.Address, &f.Category, &f.Description, &f.History, &p, &f.ImagePath)
 		if err != nil {
 			return []models.Landmark{}, err
 
@@ -128,4 +131,96 @@ func (l *LandmarkDB) GetLandmarksByIDs(ids []any) ([]models.Landmark, error) {
 		landmarks = append(landmarks, f)
 	}
 	return landmarks, nil
+}
+
+func (l *LandmarkDB) Search(q string) ([]models.Landmark, error) {
+	landmarksMap := make(map[int]models.Landmark)
+
+	query := `
+		SELECT
+			landmark.id,
+			landmark.name,
+			landmark.address,
+			landmark.category,
+			landmark.description,
+			landmark.history,
+			st_astext(landmark.location) as loc,
+			landmark.images_name
+		FROM landmark
+		WHERE to_tsvector('russian', landmark.name) @@ to_tsquery('russian', $1)
+	`
+	rows, err := l.postgres.Query(query, q)
+	if err != nil {
+		return []models.Landmark{}, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var f models.Landmark
+		var p string
+		err := rows.Scan(&f.ID, &f.Name, &f.Address, &f.Category, &f.Description, &f.History, &p, &f.ImagePath)
+		if err != nil {
+			return []models.Landmark{}, err
+		}
+		f.Location = utils.LocationFromPoint(p)
+		landmarksMap[f.ID] = f
+	}
+	if err = rows.Err(); err != nil {
+		return []models.Landmark{}, err
+	}
+
+	query = `
+		SELECT
+			landmark.id,
+			landmark.name,
+			landmark.address,
+			landmark.category,
+			landmark.description,
+			landmark.history,
+			st_astext(landmark.location) as loc,
+			landmark.images_name
+		FROM landmark
+		WHERE to_tsvector('russian', landmark.address) @@ to_tsquery('russian', $1)
+	`
+	rows, err = l.postgres.Query(query, q)
+	if err != nil {
+		return []models.Landmark{}, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var f models.Landmark
+		var p string
+		err := rows.Scan(&f.ID, &f.Name, &f.Address, &f.Category, &f.Description, &f.History, &p, &f.ImagePath)
+		if err != nil {
+			return []models.Landmark{}, err
+		}
+		_, ok := landmarksMap[f.ID]
+		if ok {
+			continue
+		}
+
+		f.Location = utils.LocationFromPoint(p)
+		landmarksMap[f.ID] = f
+	}
+	if err = rows.Err(); err != nil {
+		return []models.Landmark{}, err
+	}
+
+	landmarks := make([]models.Landmark, 0, len(landmarksMap))
+	for _, landmark := range landmarksMap {
+		landmarks = append(landmarks, landmark)
+	}
+
+	return landmarks, nil
+}
+
+func (l *LandmarkDB) UpdateImagePath(place string, path string) error {
+	query :=
+		`
+		UPDATE landmark SET images_name = $1 WHERE name = $2
+		`
+	_, err := l.postgres.Exec(query, path, place)
+	return err
+
 }

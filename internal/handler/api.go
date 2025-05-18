@@ -48,3 +48,12 @@ func (h *Handler) getLandmarksByIDs(ctx *fiber.Ctx) error {
 	}
 	return ctx.JSON(points)
 }
+
+func (h *Handler) search(ctx *fiber.Ctx) error {
+	query := ctx.Query("q", "1")
+	landmarks, err := h.service.LandmarkService.Search(query)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err})
+	}
+	return ctx.JSON(landmarks)
+}

@@ -28,6 +28,8 @@ type LandmarkService interface {
 	GetFacilities(bbox models.BBOX) ([]models.Landmark, error)
 	GetLandmarks(page int) ([]models.Landmark, error)
 	GetLandmarksByIDs(ids []int) ([]models.Landmark, error)
+	Search(q string) ([]models.Landmark, error)
+	UpdateImagePath(place, path string) error
 }
 
 func NewService(ctx context.Context, repository *repository.Repository, tokenMaker token.Maker, hashUtil hash.Hasher, cfg config.Config) *Service {

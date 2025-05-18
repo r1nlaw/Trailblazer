@@ -39,3 +39,10 @@ func (s *Landmark) GetLandmarksByIDs(ids []int) ([]models.Landmark, error) {
 	return s.repo.GetLandmarksByIDs(ID)
 
 }
+func (s *Landmark) Search(q string) ([]models.Landmark, error) {
+	return s.repo.Search(q)
+}
+
+func (s *Landmark) UpdateImagePath(place, path string) error {
+	return s.repo.UpdateImagePath(place, path)
+}
