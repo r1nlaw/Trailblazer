@@ -77,7 +77,7 @@ def verify():
         )
 
         if matched:
-            return jsonify({"result": "Match"}), 200
+            return jsonify({"result": "Да, это та достопримечательность"}), 200
         else:
             return jsonify({"result": "Does not match"}), 400
     finally:
