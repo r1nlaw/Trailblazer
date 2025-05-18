@@ -57,3 +57,13 @@ func (h *Handler) search(ctx *fiber.Ctx) error {
 	}
 	return ctx.JSON(landmarks)
 }
+
+func (h *Handler) getLandmarksByName(ctx *fiber.Ctx) error {
+	name := ctx.Params("name")
+
+	landmark, err := h.service.LandmarkService.GetLandmarksByName(name)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err})
+	}
+	return ctx.JSON(landmark)
+}

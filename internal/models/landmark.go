@@ -5,16 +5,17 @@ import (
 )
 
 type Landmark struct {
-	ID          int        `json:"id"`
-	Name        string     `json:"name"`
-	Address     string     `json:"address"`
-	Category    string     `json:"category"`
-	Schedules   []Schedule `json:"schedules"`
-	Prices      []Price    `json:"prices"`
-	Description string     `json:"description"`
-	History     string     `json:"history"`
-	Location    `json:"location"`
-	ImagePath   string `json:"image_path"`
+	ID             int        `json:"id"`
+	Name           string     `json:"name"`
+	TranslatedName string     `json:"translated_name"`
+	Address        string     `json:"address"`
+	Category       string     `json:"category"`
+	Schedules      []Schedule `json:"schedules"`
+	Prices         []Price    `json:"prices"`
+	Description    string     `json:"description"`
+	History        string     `json:"history"`
+	Location       `json:"location"`
+	ImagePath      string `json:"image_path"`
 }
 type Schedule struct {
 	Start       time.Time `json:"start"`

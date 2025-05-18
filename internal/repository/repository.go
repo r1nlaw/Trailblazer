@@ -17,6 +17,7 @@ type Landmark interface {
 	GetLandmarksByIDs(ids []any) ([]models.Landmark, error)
 	Search(q string) ([]models.Landmark, error)
 	UpdateImagePath(place string, path string) error
+	GetLandmarksByName(name string) (models.Landmark, error)
 }
 type Repository struct {
 	User

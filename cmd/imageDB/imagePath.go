@@ -77,7 +77,7 @@ func main() {
 			`<`, ``,
 			`"`, ``,
 		)
-		translator = replacer.Replace(translator)
+		translator = strings.ToLower(replacer.Replace(translator))
 
 		err = services.LandmarkService.UpdateImagePath(fileName, translator+ext)
 

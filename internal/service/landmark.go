@@ -46,3 +46,6 @@ func (s *Landmark) Search(q string) ([]models.Landmark, error) {
 func (s *Landmark) UpdateImagePath(place, path string) error {
 	return s.repo.UpdateImagePath(place, path)
 }
+func (s *Landmark) GetLandmarksByName(name string) (models.Landmark, error) {
+	return s.repo.GetLandmarksByName(name)
+}

@@ -44,4 +44,5 @@ func (h *Handler) InitRoutes(app *fiber.App) {
 	api.Get("/landmark", h.getLandmarks)
 	api.Post("/getLandmarks", h.getLandmarksByIDs)
 	api.Get("/search", h.search)
+	api.Get("/landmark/:name", h.getLandmarksByName)
 }

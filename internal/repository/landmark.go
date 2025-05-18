@@ -46,6 +46,7 @@ func (l *LandmarkDB) GetFacilities(bbox models.BBOX) ([]models.Landmark, error) 
 		if err != nil {
 			return []models.Landmark{}, err
 		}
+		f.TranslatedName = strings.Split(f.ImagePath, ".")[0]
 		f.Location = utils.LocationFromPoint(p)
 		facilities = append(facilities, f)
 	}
@@ -82,6 +83,8 @@ func (l *LandmarkDB) GetLandmarks(page int) ([]models.Landmark, error) {
 			return []models.Landmark{}, err
 
 		}
+		f.TranslatedName = strings.Split(f.ImagePath, ".")[0]
+
 		f.Location = utils.LocationFromPoint(p)
 		landmarks = append(landmarks, f)
 	}
@@ -127,6 +130,8 @@ func (l *LandmarkDB) GetLandmarksByIDs(ids []any) ([]models.Landmark, error) {
 			return []models.Landmark{}, err
 
 		}
+
+		f.TranslatedName = strings.Split(f.ImagePath, ".")[0]
 		f.Location = utils.LocationFromPoint(p)
 		landmarks = append(landmarks, f)
 	}
@@ -162,6 +167,7 @@ func (l *LandmarkDB) Search(q string) ([]models.Landmark, error) {
 		if err != nil {
 			return []models.Landmark{}, err
 		}
+		f.TranslatedName = strings.Split(f.ImagePath, ".")[0]
 		f.Location = utils.LocationFromPoint(p)
 		landmarksMap[f.ID] = f
 	}
@@ -200,6 +206,7 @@ func (l *LandmarkDB) Search(q string) ([]models.Landmark, error) {
 			continue
 		}
 
+		f.TranslatedName = strings.Split(f.ImagePath, ".")[0]
 		f.Location = utils.LocationFromPoint(p)
 		landmarksMap[f.ID] = f
 	}
@@ -218,9 +225,25 @@ func (l *LandmarkDB) Search(q string) ([]models.Landmark, error) {
 func (l *LandmarkDB) UpdateImagePath(place string, path string) error {
 	query :=
 		`
-		UPDATE landmark SET images_name = $1 WHERE name = $2
+		UPDATE landmark SET images_name = $1 WHERE name = $2 or lower(images_name)=$1
 		`
 	_, err := l.postgres.Exec(query, path, place)
 	return err
 
+}
+func (l *LandmarkDB) GetLandmarksByName(name string) (models.Landmark, error) {
+	query :=
+		`
+		SELECT id,name, address,category,description,history,st_astext(landmark.location) as loc,images_name FROM landmark
+		WHERE SUBSTRING(images_name FROM 1 FOR POSITION('.' IN images_name) ) LIKE $1 || '%';
+		`
+	res := l.postgres.QueryRow(query, name)
+	landmark := models.Landmark{}
+	var tmp string
+	if err := res.Scan(&landmark.ID, &landmark.Name, &landmark.Address, &landmark.Category, &landmark.Description, &landmark.History, &tmp, &landmark.ImagePath); err != nil {
+		return models.Landmark{}, err
+	}
+	landmark.TranslatedName = strings.Split(landmark.ImagePath, ".")[0]
+	landmark.Location = utils.LocationFromPoint(tmp)
+	return landmark, nil
 }
