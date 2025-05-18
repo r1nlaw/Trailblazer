@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"regexp"
 
 	"trailblazer/internal/config"
 	"trailblazer/internal/models"
@@ -45,7 +46,22 @@ func (s *Service) SignUp(c *fiber.Ctx) error {
 	if err := c.BodyParser(&request); err != nil {
 		return c.Status(fiber.StatusBadRequest).SendString("failed to parse request")
 	}
+	if len(request.Username) > 30 || len(request.Username) < 2 {
+		return c.Status(401).SendString("invalid username")
+	}
+	usernamePattern := regexp.MustCompile(`^[a-zA-Zа-яА-ЯёЁ]+(?: [a-zA-Zа-яА-ЯёЁ]+)*$`)
+	if !usernamePattern.MatchString(request.Username) {
+		return c.Status(402).SendString("username must contain only letters (latin or cyrillic)")
+	}
 
+	var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.(com|ru|org|net|edu|gov|info|biz|io|me|dev)$`)
+
+	if !emailRegex.MatchString(request.Email) {
+		return c.Status(fiber.StatusBadRequest).SendString("invalid email address format")
+	}
+	if len(request.PasswordHash) < 6 {
+		return c.Status(403).SendString("invalid password")
+	}
 	hashedPassword, err := s.hashUtil.HashPassword(request.PasswordHash)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString("failed to hash password")
@@ -72,11 +88,11 @@ func (s *Service) SignIn(c *fiber.Ctx) error {
 
 	userData, err := s.repository.GetUser(s.ctx, request.Email)
 	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).SendString("invalid email or password")
+		return c.Status(405).SendString("invalid email or password")
 	}
 
 	if !s.hashUtil.CheckPassword(userData.PasswordHash, request.PasswordHash) {
-		return c.Status(fiber.StatusUnauthorized).SendString("invalid email or password")
+		return c.Status(405).SendString("invalid email or password")
 	}
 
 	token, err := s.tokenMaker.CreateToken(userData.ID)
