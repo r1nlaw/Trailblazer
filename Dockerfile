@@ -15,6 +15,7 @@ WORKDIR /app
 COPY --from=builder /app/main ./
 COPY schema/* ./schema/
 COPY configs/* ./configs/
+COPY images/* ./images/
 COPY .env ./
 
 RUN chmod +x /app/main
