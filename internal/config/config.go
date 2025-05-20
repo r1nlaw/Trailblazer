@@ -39,6 +39,10 @@ type ParserConfig struct {
 
 func New(path string) (*Config, error) {
 	viper.SetConfigFile(path)
+	//res, _ := os.ReadDir(".")
+	//for _, r := range res {
+	//	fmt.Println(r.Name())
+	//}
 	if err := viper.ReadInConfig(); err != nil {
 		slog.Warn(fmt.Sprintf("Error reading config: %v", err))
 		return nil, err
@@ -46,7 +50,6 @@ func New(path string) (*Config, error) {
 	var cfg Config
 	if err := godotenv.Load(); err != nil {
 		slog.Warn("failed to load env file", err)
-		return nil, err
 	}
 	cfg.DatabaseConfig = DatabaseConfig{
 		Host:     os.Getenv("DB_HOST"),
