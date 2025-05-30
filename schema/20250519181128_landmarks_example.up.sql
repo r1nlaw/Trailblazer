@@ -11,7 +11,7 @@ FROM json_populate_recordset(NULL::landmark, '
     "history": "Построен в 1956 году. В 2000-х реставрирован с сохранением оригинальных интерьеров: лепнина, хрустальные люстры, мраморные лестницы. Место проведения кинофестивалей.",
     "photo": null,
     "location": "0101000020E610000031B43A39430D4140433A3C84F1794640",
-    "images_name": "kinoteatr_simferopol"
+    "images_name": "kinoteatr_simferopol.jpg"
   },
   {
     "id": 10,
