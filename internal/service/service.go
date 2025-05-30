@@ -102,6 +102,16 @@ func (s *Service) SignIn(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString("failed to create token")
 	}
+	resp := SignInResponse{
+		Message: "login successful",
+		Token:   token,
+		User:    *userData,
+	}
+	return c.Status(fiber.StatusOK).JSON(resp)
+}
 
-	return c.Status(fiber.StatusOK).JSON(map[string]string{"message": "login successful", "token": token})
+type SignInResponse struct {
+	Message string      `json:"message"`
+	Token   string      `json:"token"`
+	User    models.User `json:"user"`
 }
