@@ -30,10 +30,12 @@ func NewJWTMaker(secretKey string) (*JWTMaker, error) {
 }
 
 func (j *JWTMaker) CreateToken(userID int64) (string, error) {
+	expirationTime := time.Now().Add(24 * time.Hour)
+
 	payload := jwt.MapClaims{
-		"user_id":    userID,
-		"expired_at": time.Now().Add(time.Hour * 24).Unix(),
-		"created_at": time.Now().Unix(),
+		"user_id": userID,
+		"exp":     expirationTime.Unix(),
+		"iat":     time.Now().Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, payload)

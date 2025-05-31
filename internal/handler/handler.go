@@ -21,10 +21,12 @@ func NewHandler(service *service.Service) *Handler {
 
 func (h *Handler) InitRoutes(app *fiber.App) {
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "*",
-		AllowMethods: "GET, POST, PUT, DELETE",
-		AllowHeaders: "Content-Type, Authorization",
+		AllowOrigins:     "http://localhost:5173",
+		AllowMethods:     "GET, POST, PUT, DELETE",
+		AllowHeaders:     "Content-Type, Authorization",
+		AllowCredentials: true,
 	}))
+
 	if _, err := os.Stat("./images"); os.IsNotExist(err) {
 		slog.Info("Директория ./images не существует")
 	}
@@ -36,6 +38,7 @@ func (h *Handler) InitRoutes(app *fiber.App) {
 	user := app.Group("/user")
 	user.Post("/signIn", h.service.SignIn)
 	user.Post("/signUp", h.service.SignUp)
+	user.Post("/changeProfile", h.service.ChangeProfile)
 	api := app.Group("/api")
 	api.Use(cors.New(cors.Config{
 		AllowOrigins:     "*",

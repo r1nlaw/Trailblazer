@@ -2,7 +2,11 @@ package service
 
 import (
 	"context"
+	"encoding/base64"
+	"log"
 	"regexp"
+	"strings"
+	"time"
 
 	"trailblazer/internal/config"
 	"trailblazer/internal/models"
@@ -24,6 +28,7 @@ type Service struct {
 type UserService interface {
 	SignUp(c *fiber.Ctx) error
 	SignIn(c *fiber.Ctx) error
+	ChangeProfile(c *fiber.Ctx) error
 }
 type LandmarkService interface {
 	GetFacilities(bbox models.BBOX) ([]models.Landmark, error)
@@ -102,6 +107,16 @@ func (s *Service) SignIn(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString("failed to create token")
 	}
+	c.Cookie(&fiber.Cookie{
+		Name:     "token",
+		Value:    token,
+		Expires:  time.Now().Add(7 * 24 * time.Hour),
+		HTTPOnly: true,
+		Secure:   false, // true, если HTTPS
+		SameSite: "Lax", // или "None" при фронте на другом домене и HTTPS
+		Path:     "/",
+	})
+
 	resp := SignInResponse{
 		Message: "login successful",
 		Token:   token,
@@ -114,4 +129,54 @@ type SignInResponse struct {
 	Message string      `json:"message"`
 	Token   string      `json:"token"`
 	User    models.User `json:"user"`
+}
+
+func (s *Service) ChangeProfile(c *fiber.Ctx) error {
+	// 1. Проверка заголовка авторизации
+	authHeader := c.Get("Authorization")
+	if authHeader == "" {
+		return c.Status(fiber.StatusUnauthorized).SendString("missing authorization header")
+	}
+	if !strings.HasPrefix(authHeader, "Bearer ") {
+		return c.Status(fiber.StatusUnauthorized).SendString("invalid authorization header format")
+	}
+	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+
+	// 2. Верификация токена
+	payload, err := s.tokenMaker.VerifyToken(tokenStr)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).SendString("invalid or expired token")
+	}
+
+	// 3. Входящая структура — с base64 строкой
+	type incomingProfile struct {
+		Username string `json:"username"`
+		UserBIO  string `json:"user_bio"`
+		Avatar   string `json:"avatar"` // base64-encoded
+	}
+
+	var req incomingProfile
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).SendString("failed to parse request")
+	}
+
+	// 4. Декодируем base64 в []byte
+	var avatarBytes []byte
+	if req.Avatar != "" {
+		avatarBytes, err = base64.StdEncoding.DecodeString(req.Avatar)
+		if err != nil {
+			return c.Status(fiber.StatusBadRequest).SendString("invalid base64 avatar")
+		}
+	}
+
+	log.Printf("Parsed profile: username=%s, bio=%s, avatar len=%d, userID=%d",
+		req.Username, req.UserBIO, len(avatarBytes), payload.UserID)
+
+	// 5. Обновляем профиль
+	err = s.repository.UpdateUserProfile(c.Context(), int(payload.UserID), req.Username, avatarBytes, req.UserBIO)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).SendString("failed to update profile: " + err.Error())
+	}
+
+	return c.Status(fiber.StatusOK).SendString("profile updated successfully")
 }

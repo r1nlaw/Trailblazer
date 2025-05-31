@@ -1,0 +1,2 @@
+ALTER TABLE profiles_users
+DROP CONSTRAINT profiles_users_username_fkey;

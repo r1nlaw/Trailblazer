@@ -71,3 +71,41 @@ func (u *UserDB) AddUser(ctx context.Context, userData models.User) error {
 	}
 	return nil
 }
+
+func (u *UserDB) UpdateUserProfile(ctx context.Context, userID int, username string, avatarURL []byte, userBIO string) error {
+	tx, err := u.postgres.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
+
+	// 1. Обновляем username в основной таблице
+	_, err = tx.ExecContext(ctx, `UPDATE users SET username = $1 WHERE id = $2`, username, userID)
+	if err != nil {
+		return fmt.Errorf("update users: %w", err)
+	}
+
+	// 2. Обновляем профиль
+	_, err = tx.ExecContext(ctx, `
+		UPDATE profiles_users
+		SET username = $1,
+			avatar = $2,
+			user_bio = $3,
+			updated_at = $4
+		WHERE user_id = $5
+	`, username, avatarURL, userBIO, time.Now(), userID)
+
+	if err != nil {
+		return fmt.Errorf("update profiles_users: %w", err)
+	}
+
+	return nil
+
+}
