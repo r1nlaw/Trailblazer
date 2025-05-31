@@ -72,6 +72,21 @@ func (u *UserDB) AddUser(ctx context.Context, userData models.User) error {
 	return nil
 }
 
+func (u *UserDB) GetProfile(ctx context.Context, userID int64) (*models.Profile, error) {
+	query := `SELECT username, user_bio, avatar FROM profiles_users WHERE user_id = $1`
+	var profile models.Profile
+
+	err := u.postgres.GetContext(ctx, &profile, query, userID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("user not found")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get profile: %w", err)
+	}
+
+	return &profile, nil
+}
+
 func (u *UserDB) UpdateUserProfile(ctx context.Context, userID int, username string, avatarURL []byte, userBIO string) error {
 	tx, err := u.postgres.BeginTx(ctx, nil)
 	if err != nil {
@@ -86,13 +101,11 @@ func (u *UserDB) UpdateUserProfile(ctx context.Context, userID int, username str
 		}
 	}()
 
-	// 1. Обновляем username в основной таблице
 	_, err = tx.ExecContext(ctx, `UPDATE users SET username = $1 WHERE id = $2`, username, userID)
 	if err != nil {
 		return fmt.Errorf("update users: %w", err)
 	}
 
-	// 2. Обновляем профиль
 	_, err = tx.ExecContext(ctx, `
 		UPDATE profiles_users
 		SET username = $1,

@@ -10,6 +10,7 @@ type User interface {
 	GetUser(ctx context.Context, email string) (*models.User, error)
 	AddUser(ctx context.Context, userData models.User) error
 	UpdateUserProfile(context.Context, int, string, []byte, string) error
+	GetProfile(ctx context.Context, userID int64) (*models.Profile, error)
 }
 
 type Landmark interface {

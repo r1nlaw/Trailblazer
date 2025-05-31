@@ -132,7 +132,6 @@ type SignInResponse struct {
 }
 
 func (s *Service) ChangeProfile(c *fiber.Ctx) error {
-	// 1. Проверка заголовка авторизации
 	authHeader := c.Get("Authorization")
 	if authHeader == "" {
 		return c.Status(fiber.StatusUnauthorized).SendString("missing authorization header")
@@ -142,17 +141,15 @@ func (s *Service) ChangeProfile(c *fiber.Ctx) error {
 	}
 	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
 
-	// 2. Верификация токена
 	payload, err := s.tokenMaker.VerifyToken(tokenStr)
 	if err != nil {
 		return c.Status(fiber.StatusUnauthorized).SendString("invalid or expired token")
 	}
 
-	// 3. Входящая структура — с base64 строкой
 	type incomingProfile struct {
 		Username string `json:"username"`
 		UserBIO  string `json:"user_bio"`
-		Avatar   string `json:"avatar"` // base64-encoded
+		Avatar   string `json:"avatar"`
 	}
 
 	var req incomingProfile
@@ -160,7 +157,6 @@ func (s *Service) ChangeProfile(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).SendString("failed to parse request")
 	}
 
-	// 4. Декодируем base64 в []byte
 	var avatarBytes []byte
 	if req.Avatar != "" {
 		avatarBytes, err = base64.StdEncoding.DecodeString(req.Avatar)
@@ -172,11 +168,33 @@ func (s *Service) ChangeProfile(c *fiber.Ctx) error {
 	log.Printf("Parsed profile: username=%s, bio=%s, avatar len=%d, userID=%d",
 		req.Username, req.UserBIO, len(avatarBytes), payload.UserID)
 
-	// 5. Обновляем профиль
 	err = s.repository.UpdateUserProfile(c.Context(), int(payload.UserID), req.Username, avatarBytes, req.UserBIO)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString("failed to update profile: " + err.Error())
 	}
 
 	return c.Status(fiber.StatusOK).SendString("profile updated successfully")
+}
+
+func (s *Service) GetUserProfile(c *fiber.Ctx) error {
+	authHeader := c.Get("Authorization")
+	if authHeader == "" {
+		return c.Status(fiber.StatusUnauthorized).SendString("missing authorization header")
+	}
+	if !strings.HasPrefix(authHeader, "Bearer ") {
+		return c.Status(fiber.StatusUnauthorized).SendString("invalid authorization header format")
+	}
+	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+
+	payload, err := s.tokenMaker.VerifyToken(tokenStr)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).SendString("invalid or expired token")
+	}
+
+	profile, err := s.repository.GetProfile(c.Context(), payload.UserID)
+	if err != nil {
+		log.Printf("Ошибка получения профиля пользователя (ID %d): %v", payload.UserID, err)
+		return c.Status(fiber.StatusInternalServerError).SendString("failed to get user profile: " + err.Error())
+	}
+	return c.Status(fiber.StatusOK).JSON(profile)
 }
