@@ -37,6 +37,7 @@ type LandmarkService interface {
 	Search(q string) ([]models.Landmark, error)
 	UpdateImagePath(place, path string) error
 	GetLandmarksByName(name string) (models.Landmark, error)
+	GetLandmarksByCategories(categories []string) ([]models.Landmark, error)
 }
 
 func NewService(ctx context.Context, repository *repository.Repository, tokenMaker token.Maker, hashUtil hash.Hasher, cfg config.Config) *Service {

@@ -20,6 +20,7 @@ type Landmark interface {
 	Search(q string) ([]models.Landmark, error)
 	UpdateImagePath(place string, path string) error
 	GetLandmarksByName(name string) (models.Landmark, error)
+	GetLandmarksByCategories(categories []string) ([]models.Landmark, error)
 }
 type Repository struct {
 	User

@@ -49,3 +49,7 @@ func (s *Landmark) UpdateImagePath(place, path string) error {
 func (s *Landmark) GetLandmarksByName(name string) (models.Landmark, error) {
 	return s.repo.GetLandmarksByName(name)
 }
+
+func (s *Landmark) GetLandmarksByCategories(categories []string) ([]models.Landmark, error) {
+	return s.repo.GetLandmarksByCategories(categories)
+}

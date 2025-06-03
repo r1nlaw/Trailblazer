@@ -247,3 +247,50 @@ func (l *LandmarkDB) GetLandmarksByName(name string) (models.Landmark, error) {
 	landmark.Location = utils.LocationFromPoint(tmp)
 	return landmark, nil
 }
+
+func (l *LandmarkDB) GetLandmarksByCategories(categories []string) ([]models.Landmark, error) {
+	if len(categories) == 0 {
+		return []models.Landmark{}, nil
+	}
+
+	placeholders := make([]string, len(categories))
+	args := make([]interface{}, len(categories))
+	for i, category := range categories {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = category
+	}
+
+	query := fmt.Sprintf(`
+		SELECT
+			landmark.id,
+			landmark.name,
+			landmark.address,
+			landmark.category,
+			landmark.description,
+			landmark.history,
+			st_astext(landmark.location) AS loc,
+			landmark.images_name
+		FROM landmark
+		WHERE landmark.category IN (%s)
+	`, strings.Join(placeholders, ","))
+
+	rows, err := l.postgres.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var landmarks []models.Landmark
+	for rows.Next() {
+		var f models.Landmark
+		var loc string
+		if err := rows.Scan(&f.ID, &f.Name, &f.Address, &f.Category, &f.Description, &f.History, &loc, &f.ImagePath); err != nil {
+			return nil, err
+		}
+		f.TranslatedName = strings.Split(f.ImagePath, ".")[0]
+		f.Location = utils.LocationFromPoint(loc)
+		landmarks = append(landmarks, f)
+	}
+
+	return landmarks, nil
+}

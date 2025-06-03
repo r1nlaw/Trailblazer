@@ -67,3 +67,23 @@ func (h *Handler) getLandmarksByName(ctx *fiber.Ctx) error {
 	}
 	return ctx.JSON(landmark)
 }
+
+func (h *Handler) getLandmarksByCategories(ctx *fiber.Ctx) error {
+	var categories []string
+	ctx.Request().URI().QueryArgs().VisitAll(func(key, val []byte) {
+		if string(key) == "category" {
+			categories = append(categories, string(val))
+		}
+	})
+
+	if len(categories) == 0 {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "no categories provided"})
+	}
+
+	landmarks, err := h.service.LandmarkService.GetLandmarksByCategories(categories)
+	if err != nil {
+		return ctx.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	return ctx.JSON(landmarks)
+}
