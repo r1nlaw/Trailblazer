@@ -54,7 +54,7 @@ func (l *LandmarkDB) GetFacilities(bbox models.BBOX) ([]models.Landmark, error) 
 
 }
 
-func (l *LandmarkDB) GetLandmarks(page int) ([]models.Landmark, error) {
+func (l *LandmarkDB) GetLandmarks(page int, categories []string) ([]models.Landmark, error) {
 	offset := (page - 1) * PageSize
 	query := `
 			SELECT
@@ -69,6 +69,22 @@ func (l *LandmarkDB) GetLandmarks(page int) ([]models.Landmark, error) {
 			    FROM landmark
 			LIMIT $1 OFFSET $2
 		`
+	if len(categories) > 0 {
+		query = fmt.Sprintf(`
+		SELECT
+			landmark.id,
+			landmark.name,
+			landmark.address,
+			landmark.category,
+			landmark.description,
+			landmark.history,
+			st_astext(landmark.location) AS loc,
+			landmark.images_name
+		FROM landmark
+		WHERE lower(landmark.category) IN (%s)
+		LIMIT $1 OFFSET $2
+	`, strings.Join(categories, ","))
+	}
 	rows, err := l.postgres.Query(query, PageSize, offset)
 	if err != nil {
 		return []models.Landmark{}, err

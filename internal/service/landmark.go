@@ -27,8 +27,8 @@ func (s *Landmark) GetFacilities(bbox models.BBOX) ([]models.Landmark, error) {
 
 }
 
-func (s *Landmark) GetLandmarks(page int) ([]models.Landmark, error) {
-	return s.repo.GetLandmarks(page)
+func (s *Landmark) GetLandmarks(page int, categories []string) ([]models.Landmark, error) {
+	return s.repo.GetLandmarks(page, categories)
 }
 
 func (s *Landmark) GetLandmarksByIDs(ids []int) ([]models.Landmark, error) {

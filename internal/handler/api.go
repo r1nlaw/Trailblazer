@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"fmt"
 	"strconv"
+	"strings"
 
 	"trailblazer/internal/models"
 
@@ -23,12 +25,18 @@ func (h *Handler) facilities(c *fiber.Ctx) error {
 func (h *Handler) getLandmarks(ctx *fiber.Ctx) error {
 	var page int
 	p := ctx.Query("page", "1")
+	var categories []string
+	ctx.Request().URI().QueryArgs().VisitAll(func(key, val []byte) {
+		if string(key) == "category" {
+			categories = append(categories, fmt.Sprintf("'%s'", strings.ToLower(string(val))))
+		}
+	})
 	page, err := strconv.Atoi(p)
 	if err != nil {
 		page = 1
 		err = nil
 	}
-	landmarks, err := h.service.LandmarkService.GetLandmarks(page)
+	landmarks, err := h.service.LandmarkService.GetLandmarks(page, categories)
 	if err != nil {
 		return ctx.JSON(fiber.Map{"error": err.Error()})
 	}

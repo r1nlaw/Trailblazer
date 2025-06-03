@@ -32,7 +32,7 @@ type UserService interface {
 }
 type LandmarkService interface {
 	GetFacilities(bbox models.BBOX) ([]models.Landmark, error)
-	GetLandmarks(page int) ([]models.Landmark, error)
+	GetLandmarks(page int, categories []string) ([]models.Landmark, error)
 	GetLandmarksByIDs(ids []int) ([]models.Landmark, error)
 	Search(q string) ([]models.Landmark, error)
 	UpdateImagePath(place, path string) error
