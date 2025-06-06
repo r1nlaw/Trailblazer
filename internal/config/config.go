@@ -12,7 +12,7 @@ import (
 type Config struct {
 	DatabaseConfig
 	HostConfig
-	GeocoderConfig
+	WeatherConfig
 	ParserConfig
 }
 type HostConfig struct {
@@ -28,9 +28,10 @@ type DatabaseConfig struct {
 	DBName   string
 	SSLMode  string
 }
-type GeocoderConfig struct {
-	GeoUrl string
-	ApiKey string
+type WeatherConfig struct {
+	WeatherUrl string
+	ApiKey     string
+	Language   string
 }
 type ParserConfig struct {
 	IsProduction bool
@@ -63,9 +64,10 @@ func New(path string) (*Config, error) {
 	cfg.HostConfig = HostConfig{
 		Port: viper.GetString("server.port"),
 	}
-	cfg.GeocoderConfig = GeocoderConfig{
-		GeoUrl: viper.GetString("geocoder.url"),
-		ApiKey: viper.GetString("geocoder.api_key"),
+	cfg.WeatherConfig = WeatherConfig{
+		WeatherUrl: viper.GetString("weather.url"),
+		ApiKey:     os.Getenv("WEATHER_API"),
+		Language:   viper.GetString("weather.lang"),
 	}
 	cfg.ParserConfig = ParserConfig{
 		IsProduction: viper.GetBool("parser.is_production"),

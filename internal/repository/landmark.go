@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"strings"
 
@@ -31,6 +32,8 @@ func (l *LandmarkDB) GetFacilities(bbox models.BBOX) ([]models.Landmark, error) 
 			st_astext(landmark.location) as loc,
 			landmark.images_name
 		FROM landmark        
+		JOIN public.weather w on landmark.id = w.landmark_id
+		
 	  	WHERE ST_Intersects(ST_MakeEnvelope($1,$2,$3,$4,4326 ), landmark.location::geometry)
 	  `
 	rows, err := l.postgres.Query(selectQuery, bbox.SW.Lng, bbox.SW.Lat, bbox.NE.Lng, bbox.NE.Lat)
@@ -46,6 +49,7 @@ func (l *LandmarkDB) GetFacilities(bbox models.BBOX) ([]models.Landmark, error) 
 		if err != nil {
 			return []models.Landmark{}, err
 		}
+
 		f.TranslatedName = strings.Split(f.ImagePath, ".")[0]
 		f.Location = utils.LocationFromPoint(p)
 		facilities = append(facilities, f)
@@ -67,8 +71,9 @@ func (l *LandmarkDB) GetLandmarks(page int, categories []string) ([]models.Landm
 				st_astext(landmark.location) as loc		,
 				landmark.images_name
 			    FROM landmark
-			LIMIT $1 OFFSET $2
+			
 		`
+
 	if len(categories) > 0 {
 		query = fmt.Sprintf(`
 		SELECT
@@ -81,14 +86,21 @@ func (l *LandmarkDB) GetLandmarks(page int, categories []string) ([]models.Landm
 			st_astext(landmark.location) AS loc,
 			landmark.images_name
 		FROM landmark
+		
 		WHERE lower(landmark.category) IN (%s)
-		LIMIT $1 OFFSET $2
+		
 	`, strings.Join(categories, ","))
 	}
-	rows, err := l.postgres.Query(query, PageSize, offset)
+	var rows *sql.Rows
+	var err error
+	if page != -1 {
+		query += " LIMIT $1 OFFSET $2"
+		rows, err = l.postgres.Query(query, PageSize, offset)
+	} else {
+		rows, err = l.postgres.Query(query)
+	}
 	if err != nil {
 		return []models.Landmark{}, err
-
 	}
 	defer rows.Close()
 	var landmarks []models.Landmark

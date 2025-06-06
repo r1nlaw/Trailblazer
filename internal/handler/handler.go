@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"os"
 
+	"trailblazer/internal/api"
 	"trailblazer/internal/service"
 
 	"github.com/gofiber/fiber/v2"
@@ -13,10 +14,11 @@ import (
 
 type Handler struct {
 	service *service.Service
+	api     api.WeatherAPI
 }
 
-func NewHandler(service *service.Service) *Handler {
-	return &Handler{service: service}
+func NewHandler(service *service.Service, api api.WeatherAPI) *Handler {
+	return &Handler{service: service, api: api}
 }
 
 func (h *Handler) InitRoutes(app *fiber.App) {
@@ -46,7 +48,6 @@ func (h *Handler) InitRoutes(app *fiber.App) {
 		AllowCredentials: false,
 	})).Post("/facilities", h.facilities)
 	api.Get("/landmark", h.getLandmarks)
-	api.Get("/landmarks/filtersCategories", h.getLandmarksByCategories)
 	api.Post("/getLandmarks", h.getLandmarksByIDs)
 	api.Get("/search", h.search)
 	api.Get("/landmark/:name", h.getLandmarksByName)

@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	api2 "trailblazer/internal/api"
 	"trailblazer/internal/config"
 	"trailblazer/internal/handler"
 	"trailblazer/internal/repository"
@@ -53,10 +54,11 @@ func main() {
 
 	hashUtil := hash.NewBcryptHasher()
 	ctx := context.Background()
+	api := api2.NewWeatherClient(cfg.WeatherConfig)
 	slog.Info("initializing repository")
 	services := service.NewService(ctx, repo, tokenMaker, hashUtil, *cfg)
 	slog.Info("initializing services")
-	handlers := handler.NewHandler(services)
+	handlers := handler.NewHandler(services, *api)
 	app := fiber.New()
 
 	handlers.InitRoutes(app)

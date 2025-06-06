@@ -22,7 +22,12 @@ type Landmark interface {
 	GetLandmarksByName(name string) (models.Landmark, error)
 	GetLandmarksByCategories(categories []string) ([]models.Landmark, error)
 }
+type Weather interface {
+	SetWeather(id int, forecast models.WeatherForecast) error
+	GetWeatherByLandmarkID(id int) (*[]models.WeatherResponse, error)
+}
 type Repository struct {
 	User
+	Weather
 	Landmark
 }

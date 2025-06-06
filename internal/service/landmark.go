@@ -11,8 +11,7 @@ import (
 type Landmark struct {
 	repo repository.Landmark
 	config.ParserConfig
-	cookies   []*http.Cookie
-	ApiConfig config.GeocoderConfig
+	cookies []*http.Cookie
 }
 
 func NewLandmarkService(landmark repository.Landmark, cfg config.ParserConfig) *Landmark {

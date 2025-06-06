@@ -63,9 +63,11 @@ func NewPostgresRepository(ctx context.Context, cfg config.DatabaseConfig) (*Rep
 	}
 	userDb := NewUserPostgres(ctx, db)
 	landmarkDB := NewLandmarkPostgres(ctx, db)
+	weatherDB := NewWeatherPostgres(ctx, db)
 	repository := &Repository{
 		User:     userDb,
 		Landmark: landmarkDB,
+		Weather:  weatherDB,
 	}
 	return repository, nil
 }

@@ -12,6 +12,6 @@ db:
 parser:
   is_production: false
   base_url: "https://www.kp.ru/russia/krym/dostoprimechatelnosti/"
-geocoder:
-  url:
-  api_key:
+weather:
+  lang: "RU"
+  url: "https://api.openweathermap.org"

@@ -23,6 +23,7 @@ type Service struct {
 	tokenMaker token.Maker
 	hashUtil   hash.Hasher
 	LandmarkService
+	WeatherService
 }
 
 type UserService interface {
@@ -39,6 +40,10 @@ type LandmarkService interface {
 	GetLandmarksByName(name string) (models.Landmark, error)
 	GetLandmarksByCategories(categories []string) ([]models.Landmark, error)
 }
+type WeatherService interface {
+	SetWeather(id int, forecast models.WeatherForecast) error
+	GetWeatherByLandmarkID(id int) (*[]models.WeatherResponse, error)
+}
 
 func NewService(ctx context.Context, repository *repository.Repository, tokenMaker token.Maker, hashUtil hash.Hasher, cfg config.Config) *Service {
 	return &Service{
@@ -47,6 +52,7 @@ func NewService(ctx context.Context, repository *repository.Repository, tokenMak
 		tokenMaker:      tokenMaker,
 		hashUtil:        hashUtil,
 		LandmarkService: NewLandmarkService(repository.Landmark, cfg.ParserConfig),
+		WeatherService:  NewWeatherService(repository.Weather, cfg.WeatherConfig),
 	}
 }
 
