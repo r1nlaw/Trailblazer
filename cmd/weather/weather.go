@@ -49,7 +49,9 @@ func main() {
 	}
 
 	ticker := time.NewTicker(8 * time.Hour).C
+
 	for _, landmark := range landmarks {
+		slog.Info(fmt.Sprintf("%d-%s", landmark.ID, landmark.Name))
 		res, err := api.WeatherAt(models.Location{
 			Lng: landmark.Lng,
 			Lat: landmark.Lat,
@@ -64,6 +66,8 @@ func main() {
 	slog.Info("Цикл завершен")
 	for _ = range ticker {
 		for _, landmark := range landmarks {
+			slog.Info(fmt.Sprintf("%d-%s", landmark.ID, landmark.Name))
+
 			res, err := api.WeatherAt(models.Location{
 				Lng: landmark.Lng,
 				Lat: landmark.Lat,
