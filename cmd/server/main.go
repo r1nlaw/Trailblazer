@@ -76,7 +76,7 @@ func main() {
 			slog.Warn("failed to get landmarks: ", err)
 			return
 		}
-		CreateSiteMap(landmarks, "assets", "https://putevod-crimea.ru")
+		CreateSiteMap(landmarks, "resources", "https://putevod-crimea.ru")
 
 		for _ = range ticker.C {
 			landmarks, err := repo.Landmark.GetLandmarks(-1, nil)
