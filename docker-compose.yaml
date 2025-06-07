@@ -37,6 +37,7 @@ services:
     command: [ "./main", "-c", "./configs/config.yml"]
   weather_app:
     build:
+
       context: .
       dockerfile: Dockerfile2
     container_name: go-weather-app
