@@ -6,27 +6,20 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
-	api2 "trailblazer/internal/api"
+	"github.com/sabloger/sitemap-generator/smg"
+
 	"trailblazer/internal/config"
-	"trailblazer/internal/handler"
 	"trailblazer/internal/models"
 	"trailblazer/internal/repository"
-	"trailblazer/internal/service"
-	"trailblazer/internal/service/hash"
-	"trailblazer/internal/service/token"
-
-	"github.com/gofiber/fiber/v2"
-	"github.com/sabloger/sitemap-generator/smg"
 )
 
 func InitLogger() *slog.Logger {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	return logger
 }
+
 func main() {
 	logger := InitLogger()
 	slog.SetDefault(logger)
@@ -43,61 +36,19 @@ func main() {
 		slog.Warn("failed to initialize DB", err)
 		return
 	}
-	secret := os.Getenv("JWT_SECRET")
-	if secret == "" {
-		slog.Warn("JWT_SECRET must be set", err)
-		return
-	}
-	tokenMaker, err := token.NewJWTMaker(secret)
-	if err != nil {
-		slog.Warn("failed to initialize tokenMaker", err)
-		return
-	}
-
-	hashUtil := hash.NewBcryptHasher()
-	ctx := context.Background()
-	api := api2.NewWeatherClient(cfg.WeatherConfig)
 	slog.Info("initializing repository")
-	services := service.NewService(ctx, repo, tokenMaker, hashUtil, *cfg)
-	slog.Info("initializing services")
-	handlers := handler.NewHandler(services, *api)
-	app := fiber.New()
-
-	handlers.InitRoutes(app)
-	go func() {
-		if err := app.Listen(":" + cfg.HostConfig.Port); err != nil {
-			slog.Warn("error starting server", err)
-		}
-	}()
-	go func() {
-		ticker := time.NewTicker(5 * 24 * time.Hour)
-		landmarks, err := repo.Landmark.GetLandmarks(-1, nil)
-		if err != nil {
-			slog.Warn("failed to get landmarks: ", err)
-			return
-		}
-		CreateSiteMap(landmarks, "assets", "https://putevod-crimea.ru")
-
-		for _ = range ticker.C {
-			landmarks, err := repo.Landmark.GetLandmarks(-1, nil)
-			if err != nil {
-				slog.Warn("failed to get landmarks: ", err)
-				return
-			}
-			CreateSiteMap(landmarks, "assets", "https://putevod-crimea.ru")
-
-		}
-	}()
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := app.Shutdown(); err != nil {
-		slog.Warn("error shutting down server", err)
+	landmarks, err := repo.Landmark.GetLandmarks(-1, nil)
+	if err != nil {
+		slog.Warn("failed to get landmarks: ", err)
+		return
 	}
+	CreateSiteMap(landmarks, "assets", "https://putevod-crimea.ru")
 
-	slog.Info("Server stopped successfully")
+}
+
+type URL struct {
+	Loc     string `xml:"loc"`
+	LastMod string `xml:"lastmod,omitempty"`
 }
 
 func CreateSiteMap(landmarks []models.Landmark, path, domain string) {

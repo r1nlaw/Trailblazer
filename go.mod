@@ -3,7 +3,6 @@ module trailblazer
 go 1.23.7
 
 require (
-	github.com/briandowns/openweathermap v0.21.1
 	github.com/gofiber/fiber/v2 v2.52.6
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/golang-migrate/migrate/v4 v4.18.3
@@ -11,6 +10,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.10.9
 	github.com/mozillazg/go-unidecode v0.2.0
+	github.com/sabloger/sitemap-generator v1.3.0
 	github.com/spf13/viper v1.20.1
 	golang.org/x/crypto v0.37.0
 )

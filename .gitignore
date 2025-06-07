@@ -1,2 +1,5 @@
 .idea
 .idea/*
+.env
+sitemap.xml
+assets/sitemap.xml

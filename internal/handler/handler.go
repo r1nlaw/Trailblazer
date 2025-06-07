@@ -36,6 +36,7 @@ func (h *Handler) InitRoutes(app *fiber.App) {
 	app.Use(logger.New(logger.Config{
 		Format: "[${ip}]:${port} ${status} - ${method} ${path} - ${ua}\\n\n",
 	}))
+	app.Static("/assets", "assets")
 	app.Static("/images", "images")
 	user := app.Group("/user")
 	user.Post("/signIn", h.service.SignIn)
