@@ -4,7 +4,7 @@ server:
 db:
   dir: "./landmarks/landmark.json"
   port: "5432"
-  username: "trailblazer_user1"
+  username: "trailblazer_user"
   dbname: "trailblazerDB"
   sslmode: "disable"
 
