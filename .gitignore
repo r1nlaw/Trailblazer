@@ -2,4 +2,4 @@
 .idea/*
 .env
 sitemap.xml
-assets/sitemap.xml
+resources/sitemap.xml
