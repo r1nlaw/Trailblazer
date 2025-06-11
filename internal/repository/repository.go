@@ -11,6 +11,8 @@ type User interface {
 	AddUser(ctx context.Context, userData models.User) error
 	UpdateUserProfile(context.Context, int, string, []byte, string) error
 	GetProfile(ctx context.Context, userID int64) (*models.Profile, error)
+	AddReview(review models.Review) error
+	GetReview(name string, count int) (map[int]models.ReviewByUser, error)
 }
 
 type Landmark interface {
