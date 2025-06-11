@@ -10,6 +10,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.10.9
 	github.com/mozillazg/go-unidecode v0.2.0
+	github.com/sabloger/sitemap-generator v1.3.0
 	github.com/spf13/viper v1.20.1
 	golang.org/x/crypto v0.37.0
 )

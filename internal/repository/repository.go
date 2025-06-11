@@ -11,6 +11,8 @@ type User interface {
 	AddUser(ctx context.Context, userData models.User) error
 	UpdateUserProfile(context.Context, int, string, []byte, string) error
 	GetProfile(ctx context.Context, userID int64) (*models.Profile, error)
+	AddReview(review models.Review) error
+	GetReview(name string, count int) (map[int]models.ReviewByUser, error)
 }
 
 type Landmark interface {
@@ -22,7 +24,12 @@ type Landmark interface {
 	GetLandmarksByName(name string) (models.Landmark, error)
 	GetLandmarksByCategories(categories []string) ([]models.Landmark, error)
 }
+type Weather interface {
+	SetWeather(id int, forecast models.WeatherForecast) error
+	GetWeatherByLandmarkID(id int) (*[]models.WeatherResponse, error)
+}
 type Repository struct {
 	User
+	Weather
 	Landmark
 }

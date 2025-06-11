@@ -1,0 +1,27 @@
+# Этап сборки
+FROM golang:1.23.7 AS builder
+
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN go build -o main ./cmd/weather/weather.go
+
+# Итоговый образ
+FROM debian:bookworm-slim
+
+# Установка корневых сертификатов
+RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY --from=builder /app/main ./
+COPY schema/* ./schema/
+COPY configs/* ./configs/
+COPY images/* ./images/
+COPY .env ./
+
+RUN chmod +x /app/main
+
+EXPOSE 8081
+
+CMD ["./main", "-c", "/app/configs/config.yml"]

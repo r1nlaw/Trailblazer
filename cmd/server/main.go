@@ -10,14 +10,16 @@ import (
 	"syscall"
 	"time"
 
+	api2 "trailblazer/internal/api"
 	"trailblazer/internal/config"
 	"trailblazer/internal/handler"
+	"trailblazer/internal/models"
 	"trailblazer/internal/repository"
 	"trailblazer/internal/service"
-	"trailblazer/internal/service/hash"
-	"trailblazer/internal/service/token"
+	"trailblazer/internal/utils"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/sabloger/sitemap-generator/smg"
 )
 
 func InitLogger() *slog.Logger {
@@ -45,18 +47,19 @@ func main() {
 		slog.Warn("JWT_SECRET must be set", err)
 		return
 	}
-	tokenMaker, err := token.NewJWTMaker(secret)
+	tokenMaker, err := utils.NewJWTMaker(secret)
 	if err != nil {
 		slog.Warn("failed to initialize tokenMaker", err)
 		return
 	}
 
-	hashUtil := hash.NewBcryptHasher()
+	hashUtil := utils.NewBcryptHasher()
 	ctx := context.Background()
+	api := api2.NewWeatherClient(cfg.WeatherConfig)
 	slog.Info("initializing repository")
 	services := service.NewService(ctx, repo, tokenMaker, hashUtil, *cfg)
 	slog.Info("initializing services")
-	handlers := handler.NewHandler(services)
+	handlers := handler.NewHandler(services, *api)
 	app := fiber.New()
 
 	handlers.InitRoutes(app)
@@ -65,7 +68,25 @@ func main() {
 			slog.Warn("error starting server", err)
 		}
 	}()
+	go func() {
+		ticker := time.NewTicker(5 * 24 * time.Hour)
+		landmarks, err := repo.Landmark.GetLandmarks(-1, nil)
+		if err != nil {
+			slog.Warn("failed to get landmarks: ", err)
+			return
+		}
+		CreateSiteMap(landmarks, "resources", "https://putevod-crimea.ru")
 
+		for _ = range ticker.C {
+			landmarks, err := repo.Landmark.GetLandmarks(-1, nil)
+			if err != nil {
+				slog.Warn("failed to get landmarks: ", err)
+				return
+			}
+			CreateSiteMap(landmarks, "assets", "https://putevod-crimea.ru")
+
+		}
+	}()
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
@@ -76,4 +97,44 @@ func main() {
 	}
 
 	slog.Info("Server stopped successfully")
+}
+
+func CreateSiteMap(landmarks []models.Landmark, path, domain string) {
+	now := time.Now().UTC()
+	sm := smg.NewSitemap(true)
+	sm.SetName("sitemap")
+	sm.SetHostname(domain)
+	sm.SetOutputPath(path)
+	sm.SetLastMod(&now)
+	sm.SetCompress(false)
+	sm.SetMaxURLsCount(50000)
+
+	for _, url := range landmarks {
+		err := sm.Add(&smg.SitemapLoc{
+			Loc:        fmt.Sprintf("%s/landmark/%s", domain, url.TranslatedName),
+			LastMod:    &now,
+			ChangeFreq: smg.Always,
+			Priority:   0.7,
+		})
+		if err != nil {
+			slog.Warn(fmt.Sprintf("add sitemap loc err: %v", err))
+		}
+	}
+	err := sm.Add(&smg.SitemapLoc{
+		Loc:        fmt.Sprintf("%s/", domain),
+		LastMod:    &now,
+		ChangeFreq: smg.Always,
+		Priority:   1,
+	})
+	if err != nil {
+		slog.Warn(fmt.Sprintf("add sitemap loc err: %v", err))
+	}
+	filenames, err := sm.Save()
+	if err != nil {
+		slog.Error("Unable to Save Sitemap:", err)
+		os.Exit(1)
+	}
+	for i, filename := range filenames {
+		slog.Info(fmt.Sprintf("file no.%d %s", i+1, filename))
+	}
 }
