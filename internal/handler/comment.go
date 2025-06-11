@@ -71,15 +71,15 @@ func (h *Handler) AddReview(c *fiber.Ctx) error {
 
 func (h *Handler) GetReview(c *fiber.Ctx) error {
 	name := c.Params("name")
-	countStr := c.Query("count")
-	if countStr == "" {
-		countStr = "0"
+	only_photo_str := c.Query("only_photo")
+	var only_photo bool
+	if only_photo_str == "true" {
+		only_photo = true
+	} else {
+		only_photo = false
 	}
-	count, err := strconv.Atoi(countStr)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
-	}
-	reviews, err := h.service.UserService.GetReview(name, count)
+
+	reviews, err := h.service.UserService.GetReview(name, only_photo)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}

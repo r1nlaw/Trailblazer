@@ -162,7 +162,7 @@ func (u *UserDB) AddReview(review models.Review) error {
 	return nil
 }
 
-func (u *UserDB) GetReview(name string, count int) (map[int]models.ReviewByUser, error) {
+func (u *UserDB) GetReview(name string, onlyPhoto bool) (map[int]models.ReviewByUser, error) {
 	query := `
 			SELECT r.id,r.rating, r.review,ri.photo,ri.photo_name, l.name,pu.username,pu.avatar
 				FROM reviews as r
@@ -191,6 +191,9 @@ func (u *UserDB) GetReview(name string, count int) (map[int]models.ReviewByUser,
 			return nil, fmt.Errorf("failed to get reviews: %w", err)
 		}
 		if _, ok := reviews[id]; !ok {
+			if photoName.String == "" && onlyPhoto {
+				continue
+			}
 			reviews[id] = review
 			if photoName.String != "" {
 				reviews[id].Images[photoName.String] = photo

@@ -27,7 +27,7 @@ type UserService interface {
 	JWTMiddleware(c *fiber.Ctx) error
 	GetUserProfile(c *fiber.Ctx) error
 	AddReview(review models.Review) error
-	GetReview(name string, count int) (map[int]models.ReviewByUser, error)
+	GetReview(name string, onlyPhoto bool) (map[int]models.ReviewByUser, error)
 }
 type LandmarkService interface {
 	GetFacilities(bbox models.BBOX) ([]models.Landmark, error)

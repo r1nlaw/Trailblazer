@@ -198,6 +198,6 @@ func (u *User) JWTMiddleware(c *fiber.Ctx) error {
 func (s *User) AddReview(review models.Review) error {
 	return s.repo.AddReview(review)
 }
-func (s *User) GetReview(name string, count int) (map[int]models.ReviewByUser, error) {
-	return s.repo.GetReview(name, count)
+func (s *User) GetReview(name string, onlyPhoto bool) (map[int]models.ReviewByUser, error) {
+	return s.repo.GetReview(name, onlyPhoto)
 }

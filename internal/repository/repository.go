@@ -12,7 +12,7 @@ type User interface {
 	UpdateUserProfile(context.Context, int, string, []byte, string) error
 	GetProfile(ctx context.Context, userID int64) (*models.Profile, error)
 	AddReview(review models.Review) error
-	GetReview(name string, count int) (map[int]models.ReviewByUser, error)
+	GetReview(name string, onlyPhoto bool) (map[int]models.ReviewByUser, error)
 }
 
 type Landmark interface {
