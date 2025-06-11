@@ -16,8 +16,7 @@ import (
 	"trailblazer/internal/models"
 	"trailblazer/internal/repository"
 	"trailblazer/internal/service"
-	"trailblazer/internal/service/hash"
-	"trailblazer/internal/service/token"
+	"trailblazer/internal/utils"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/sabloger/sitemap-generator/smg"
@@ -48,13 +47,13 @@ func main() {
 		slog.Warn("JWT_SECRET must be set", err)
 		return
 	}
-	tokenMaker, err := token.NewJWTMaker(secret)
+	tokenMaker, err := utils.NewJWTMaker(secret)
 	if err != nil {
 		slog.Warn("failed to initialize tokenMaker", err)
 		return
 	}
 
-	hashUtil := hash.NewBcryptHasher()
+	hashUtil := utils.NewBcryptHasher()
 	ctx := context.Background()
 	api := api2.NewWeatherClient(cfg.WeatherConfig)
 	slog.Info("initializing repository")

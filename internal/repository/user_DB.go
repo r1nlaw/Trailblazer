@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
+
 	"trailblazer/internal/models"
 
 	"github.com/jmoiron/sqlx"
@@ -75,7 +77,7 @@ func (u *UserDB) AddUser(ctx context.Context, userData models.User) error {
 func (u *UserDB) GetProfile(ctx context.Context, userID int64) (*models.Profile, error) {
 	query := `SELECT username, user_bio, avatar FROM profiles_users WHERE user_id = $1`
 	var profile models.Profile
-
+	profile.UserID = int(userID)
 	err := u.postgres.GetContext(ctx, &profile, query, userID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("user not found")
@@ -121,4 +123,83 @@ func (u *UserDB) UpdateUserProfile(ctx context.Context, userID int, username str
 
 	return nil
 
+}
+func (u *UserDB) AddReview(review models.Review) error {
+	tx, err := u.postgres.BeginTx(context.Background(), &sql.TxOptions{Isolation: sql.LevelReadCommitted})
+	if err != nil {
+		return err
+	}
+	query := `
+			INSERT INTO reviews(landmark_id,user_id,rating,review)
+			VALUES ($1, $2, $3, $4)
+			`
+	_, err = tx.Exec(query, review.LandmarkID, review.UserID, review.Rating, review.Review)
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("error with adding review: %w", err)
+	}
+	query = `
+			SELECT id from reviews WHERE landmark_id=$1 AND user_id=$2 ORDER BY id DESC
+			`
+	row := tx.QueryRow(query, review.LandmarkID, review.UserID)
+	var reviewID int64
+	err = row.Scan(&reviewID)
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("error with adding review: %w", err)
+	}
+	for name, image := range review.Images {
+		query = `
+			INSERT INTO reviews_images(review_id,photo_name,photo)
+			VALUES ($1, $2,$3)
+			`
+		_, err = tx.Exec(query, reviewID, name, image)
+		if err != nil {
+			slog.Error(fmt.Sprintf("error with adding review: %w", err))
+		}
+	}
+	tx.Commit()
+	return nil
+}
+
+func (u *UserDB) GetReview(name string, count int) (map[int]models.ReviewByUser, error) {
+	query := `
+			SELECT r.id,r.rating, r.review,ri.photo,ri.photo_name, l.name,pu.username,pu.avatar
+				FROM reviews as r
+				JOIN public.landmark l ON l.id = r.landmark_id
+				LEFT JOIN public.reviews_images ri on r.id = ri.review_id
+				JOIN public.users u on u.id = r.user_id
+				JOIN public.profiles_users pu on u.id = pu.user_id
+				WHERE l.images_name LIKE '%' || $1 || '%';
+
+				`
+	rows, err := u.postgres.Query(query, name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get reviews: %w", err)
+
+	}
+	defer rows.Close()
+	var reviews map[int]models.ReviewByUser = make(map[int]models.ReviewByUser)
+	for rows.Next() {
+		var review models.ReviewByUser
+		review.Images = make(map[string][]byte)
+		var id int
+		var photo []byte
+		var photoName sql.NullString
+		err = rows.Scan(&id, &review.Rating, &review.Review.Review, &photo, &photoName, &review.LandmarkName, &review.Username, &review.Avatar)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get reviews: %w", err)
+		}
+		if _, ok := reviews[id]; !ok {
+			reviews[id] = review
+			if photoName.String != "" {
+				reviews[id].Images[photoName.String] = photo
+			}
+		} else {
+			if photoName.String != "" {
+				reviews[id].Images[photoName.String] = photo
+			}
+		}
+	}
+	return reviews, nil
 }

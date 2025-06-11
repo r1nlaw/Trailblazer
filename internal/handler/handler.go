@@ -43,6 +43,10 @@ func (h *Handler) InitRoutes(app *fiber.App) {
 	user.Post("/signUp", h.service.SignUp)
 	user.Post("/changeProfile", h.service.ChangeProfile)
 	user.Get("/profile", h.service.GetUserProfile)
+	review := user.Group("/review")
+	review.Use("/add/:name", h.service.JWTMiddleware)
+	review.Post("/add/:name", h.AddReview)
+	review.Get("/get/:name", h.GetReview)
 	api := app.Group("/api")
 	api.Use(cors.New(cors.Config{
 		AllowOrigins:     "*",
