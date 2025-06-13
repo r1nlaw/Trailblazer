@@ -6,6 +6,7 @@ import (
 
 	"trailblazer/internal/api"
 	"trailblazer/internal/service"
+	"trailblazer/internal/utils"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -13,8 +14,10 @@ import (
 )
 
 type Handler struct {
-	service *service.Service
-	api     api.WeatherAPI
+	service    *service.Service
+	api        api.WeatherAPI
+	TokenMaker utils.Maker
+	hashUtil   utils.Hasher
 }
 
 func NewHandler(service *service.Service, api api.WeatherAPI) *Handler {
@@ -39,21 +42,22 @@ func (h *Handler) InitRoutes(app *fiber.App) {
 	app.Static("/resources", "resources")
 	app.Static("/images", "images")
 	user := app.Group("/user")
-	user.Post("/signIn", h.service.SignIn)
-	user.Post("/signUp", h.service.SignUp)
-	user.Post("/changeProfile", h.service.ChangeProfile)
-	user.Get("/profile", h.service.GetUserProfile)
+	user.Post("/signIn", h.SignIn)
+	user.Post("/signUp", h.SignUp)
+	user.Post("/changeProfile", h.ChangeProfile)
+	user.Get("/profile", h.GetUserProfile)
 	review := user.Group("/review")
-	review.Use("/add/:name", h.service.JWTMiddleware)
+	review.Use("/add/:name", h.JWTMiddleware)
 	review.Post("/add/:name", h.AddReview)
 	review.Get("/get/:name", h.GetReview)
-	api := app.Group("/api")
-	api.Use(cors.New(cors.Config{
+	apiGroup := app.Group("/apiGroup")
+	apiGroup.Use(cors.New(cors.Config{
 		AllowOrigins:     "*",
 		AllowCredentials: false,
 	})).Post("/facilities", h.facilities)
-	api.Get("/landmark", h.getLandmarks)
-	api.Post("/getLandmarks", h.getLandmarksByIDs)
-	api.Get("/search", h.search)
-	api.Get("/landmark/:name", h.getLandmarksByName)
+	apiGroup.Get("/landmark", h.getLandmarks)
+	apiGroup.Post("/getLandmarks", h.getLandmarksByIDs)
+	apiGroup.Get("/search", h.search)
+	apiGroup.Get("/landmark/:name", h.getLandmarksByName)
+
 }
