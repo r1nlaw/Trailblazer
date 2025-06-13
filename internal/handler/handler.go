@@ -50,7 +50,7 @@ func (h *Handler) InitRoutes(app *fiber.App) {
 	review.Use("/add/:name", h.JWTMiddleware)
 	review.Post("/add/:name", h.AddReview)
 	review.Get("/get/:name", h.GetReview)
-	apiGroup := app.Group("/apiGroup")
+	apiGroup := app.Group("/api")
 	apiGroup.Use(cors.New(cors.Config{
 		AllowOrigins:     "*",
 		AllowCredentials: false,

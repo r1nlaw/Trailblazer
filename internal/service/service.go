@@ -47,6 +47,6 @@ func NewService(ctx context.Context, repository *repository.Repository, tokenMak
 
 		LandmarkService: NewLandmarkService(repository.Landmark, cfg.ParserConfig),
 		WeatherService:  NewWeatherService(repository.Weather, cfg.WeatherConfig),
-		UserService:     NewUserService(repository.User, tokenMaker, hashUtil),
+		UserService:     NewUserService(repository.User),
 	}
 }

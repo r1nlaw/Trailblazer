@@ -32,7 +32,7 @@ func (l *LandmarkDB) GetFacilities(bbox models.BBOX) ([]models.Landmark, error) 
 			st_astext(landmark.location) as loc,
 			landmark.images_name
 		FROM landmark        
-		JOIN public.weather w on landmark.id = w.landmark_id
+		LEFT JOIN public.weather w on landmark.id = w.landmark_id
 		
 	  	WHERE ST_Intersects(ST_MakeEnvelope($1,$2,$3,$4,4326 ), landmark.location::geometry)
 	  `
