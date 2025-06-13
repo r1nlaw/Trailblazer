@@ -7,8 +7,6 @@ import (
 	"trailblazer/internal/models"
 	"trailblazer/internal/repository"
 	"trailblazer/internal/utils"
-
-	"github.com/gofiber/fiber/v2"
 )
 
 type Service struct {
@@ -21,13 +19,12 @@ type Service struct {
 }
 
 type UserService interface {
-	SignUp(c *fiber.Ctx) error
-	SignIn(c *fiber.Ctx) error
-	ChangeProfile(c *fiber.Ctx) error
-	JWTMiddleware(c *fiber.Ctx) error
-	GetUserProfile(c *fiber.Ctx) error
+	AddUser(c context.Context, user models.User) error
+	GetUser(c context.Context, email string) (*models.User, error)
 	AddReview(review models.Review) error
 	GetReview(name string, onlyPhoto bool) (map[int]models.ReviewByUser, error)
+	GetProfile(c context.Context, userID int64) (*models.Profile, error)
+	UpdateUserProfile(c context.Context, i int, username string, bytes []byte, bio string) error
 }
 type LandmarkService interface {
 	GetFacilities(bbox models.BBOX) ([]models.Landmark, error)
