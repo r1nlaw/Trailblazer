@@ -57,9 +57,9 @@ func main() {
 	ctx := context.Background()
 	api := api2.NewWeatherClient(cfg.WeatherConfig)
 	slog.Info("initializing repository")
-	services := service.NewService(ctx, repo, tokenMaker, hashUtil, *cfg)
+	services := service.NewService(ctx, repo, *cfg)
 	slog.Info("initializing services")
-	handlers := handler.NewHandler(services, *api)
+	handlers := handler.NewHandler(services, *api, hashUtil, tokenMaker)
 	app := fiber.New()
 
 	handlers.InitRoutes(app)

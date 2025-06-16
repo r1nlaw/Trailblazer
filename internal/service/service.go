@@ -6,7 +6,6 @@ import (
 	"trailblazer/internal/config"
 	"trailblazer/internal/models"
 	"trailblazer/internal/repository"
-	"trailblazer/internal/utils"
 )
 
 type Service struct {
@@ -25,6 +24,9 @@ type UserService interface {
 	GetReview(name string, onlyPhoto bool) (map[int]models.ReviewByUser, error)
 	GetProfile(c context.Context, userID int64) (*models.Profile, error)
 	UpdateUserProfile(c context.Context, i int, username string, bytes []byte, bio string) error
+	VerifyEmail(token string) error
+	SendToken(email string) error
+	Delete(email string) error
 }
 type LandmarkService interface {
 	GetFacilities(bbox models.BBOX) ([]models.Landmark, error)
@@ -40,13 +42,13 @@ type WeatherService interface {
 	GetWeatherByLandmarkID(id int) (*[]models.WeatherResponse, error)
 }
 
-func NewService(ctx context.Context, repository *repository.Repository, tokenMaker utils.Maker, hashUtil utils.Hasher, cfg config.Config) *Service {
+func NewService(ctx context.Context, repository *repository.Repository, cfg config.Config) *Service {
 	return &Service{
 		repository: repository,
 		ctx:        ctx,
 
 		LandmarkService: NewLandmarkService(repository.Landmark, cfg.ParserConfig),
 		WeatherService:  NewWeatherService(repository.Weather, cfg.WeatherConfig),
-		UserService:     NewUserService(repository.User),
+		UserService:     NewUserService(repository.User, cfg.SMTPConfig, cfg.HostConfig),
 	}
 }

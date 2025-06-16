@@ -13,6 +13,9 @@ type User interface {
 	GetProfile(ctx context.Context, userID int64) (*models.Profile, error)
 	AddReview(review models.Review) error
 	GetReview(name string, onlyPhoto bool) (map[int]models.ReviewByUser, error)
+	UpdateToken(token string, email string) error
+	VerifyEmail(token string) error
+	Delete(email string) error
 }
 
 type Landmark interface {

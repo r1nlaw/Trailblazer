@@ -11,25 +11,43 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
+type ErrorResponse struct {
+	Error   string `json:"error"`
+	Message string `json:"message,omitempty"`
+	Code    int    `json:"code"`
+}
+
+func sendError(c *fiber.Ctx, status int, message string, err error) error {
+	slog.Error(message, err)
+	return c.Status(status).JSON(ErrorResponse{
+		Error:   err.Error(),
+		Message: message,
+		Code:    status,
+	})
+}
+
 func (h *Handler) facilities(c *fiber.Ctx) error {
 	var req models.BBOX
 	if err := c.BodyParser(&req); err != nil {
-		c.Status(fiber.StatusBadRequest)
-		_, _ = c.WriteString(err.Error())
+		return sendError(c, fiber.StatusBadRequest, "failed to parse request", err)
 	}
+
 	facilities, err := h.service.GetFacilities(req)
+	if err != nil {
+		return sendError(c, fiber.StatusInternalServerError, "failed to get facilities", err)
+	}
+
 	for i := range facilities {
 		facilities[i].WeatherResponse, err = h.service.WeatherService.GetWeatherByLandmarkID(facilities[i].ID)
 		if err != nil {
-			slog.Error(fmt.Sprintf("error with finding weather %v", err))
+			slog.Error("failed to get weather for facility", "facility_id", facilities[i].ID, "error", err)
 			continue
 		}
 	}
-	if err != nil {
-		return c.Status(404).JSON(fiber.Map{"error": err.Error()})
-	}
+
 	return c.JSON(facilities)
 }
+
 func (h *Handler) getLandmarks(ctx *fiber.Ctx) error {
 	var page int
 	p := ctx.Query("page", "1")
@@ -39,24 +57,26 @@ func (h *Handler) getLandmarks(ctx *fiber.Ctx) error {
 			categories = append(categories, fmt.Sprintf("'%s'", strings.ToLower(string(val))))
 		}
 	})
+
 	page, err := strconv.Atoi(p)
 	if err != nil {
 		page = 1
-		err = nil
 	}
+
 	landmarks, err := h.service.LandmarkService.GetLandmarks(page, categories)
+	if err != nil {
+		return sendError(ctx, fiber.StatusInternalServerError, "failed to get landmarks", err)
+	}
+
 	for i := range landmarks {
 		landmarks[i].WeatherResponse, err = h.service.WeatherService.GetWeatherByLandmarkID(landmarks[i].ID)
 		if err != nil {
-			slog.Error(fmt.Sprintf("error with finding weather %v", err))
+			slog.Error("failed to get weather for landmark", "landmark_id", landmarks[i].ID, "error", err)
 			continue
 		}
 	}
-	if err != nil {
-		return ctx.JSON(fiber.Map{"error": err.Error()})
-	}
-	return ctx.JSON(landmarks)
 
+	return ctx.JSON(landmarks)
 }
 
 func (h *Handler) getLandmarksByIDs(ctx *fiber.Ctx) error {

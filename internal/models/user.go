@@ -7,6 +7,7 @@ type User struct {
 	Username     string    `json:"username" db:"username"`
 	Email        string    `json:"email,omitempty" db:"email"`
 	PasswordHash string    `json:"password_hash,omitempty" db:"password_hash"`
+	Verified     bool      `json:"verified,omitempty"`
 	Created_at   time.Time `json:"created_at,omitempty" db:"created_at"`
 	Updated_at   time.Time `json:"updated_at,omitempty" db:"updated_at"`
 }

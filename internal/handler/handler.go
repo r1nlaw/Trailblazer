@@ -20,8 +20,8 @@ type Handler struct {
 	hashUtil   utils.Hasher
 }
 
-func NewHandler(service *service.Service, api api.WeatherAPI) *Handler {
-	return &Handler{service: service, api: api}
+func NewHandler(service *service.Service, api api.WeatherAPI, hasher utils.Hasher, maker utils.Maker) *Handler {
+	return &Handler{service: service, api: api, hashUtil: hasher, TokenMaker: maker}
 }
 
 func (h *Handler) InitRoutes(app *fiber.App) {
@@ -44,6 +44,7 @@ func (h *Handler) InitRoutes(app *fiber.App) {
 	user := app.Group("/user")
 	user.Post("/signIn", h.SignIn)
 	user.Post("/signUp", h.SignUp)
+	user.Get("/verify", h.Verify)
 	user.Post("/changeProfile", h.ChangeProfile)
 	user.Get("/profile", h.GetUserProfile)
 	review := user.Group("/review")

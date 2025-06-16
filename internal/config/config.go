@@ -14,11 +14,20 @@ type Config struct {
 	HostConfig
 	WeatherConfig
 	ParserConfig
+	SMTPConfig
 }
 type HostConfig struct {
-	Port string
+	Port   string
+	Domain string
 }
 
+type SMTPConfig struct {
+	Email    string
+	Password string
+	Username string
+	Host     string
+	Port     string
+}
 type DatabaseConfig struct {
 	Dir      string
 	Host     string
@@ -62,7 +71,8 @@ func New(path string) (*Config, error) {
 		Dir:      viper.GetString("db.dir"),
 	}
 	cfg.HostConfig = HostConfig{
-		Port: viper.GetString("server.port"),
+		Port:   viper.GetString("server.port"),
+		Domain: viper.GetString("server.domain"),
 	}
 	cfg.WeatherConfig = WeatherConfig{
 		WeatherUrl: viper.GetString("weather.url"),
@@ -72,6 +82,13 @@ func New(path string) (*Config, error) {
 	cfg.ParserConfig = ParserConfig{
 		IsProduction: viper.GetBool("parser.is_production"),
 		BaseURL:      viper.GetString("parser.base_url"),
+	}
+	cfg.SMTPConfig = SMTPConfig{
+		Email:    os.Getenv("EMAIL_FROM"),
+		Password: os.Getenv("SMTP_PASS"),
+		Username: os.Getenv("SMTP_USER"),
+		Host:     os.Getenv("SMTP_HOST"),
+		Port:     os.Getenv("SMTP_PORT"),
 	}
 	return &cfg, nil
 }

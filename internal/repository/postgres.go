@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 
 	"trailblazer/internal/config"
 
@@ -17,9 +16,8 @@ import (
 )
 
 func NewPostgresDB(cfg config.DatabaseConfig) (*sqlx.DB, error) {
-
 	if err := godotenv.Load("./.env"); err != nil {
-		log.Fatal("error to read env file")
+		return nil, fmt.Errorf("failed to load .env file: %w", err)
 	}
 
 	connectStr := fmt.Sprintf(

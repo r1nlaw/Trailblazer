@@ -12,8 +12,6 @@ import (
 	"trailblazer/internal/config"
 	"trailblazer/internal/repository"
 	"trailblazer/internal/service"
-	"trailblazer/internal/service/hash"
-	"trailblazer/internal/service/token"
 
 	"github.com/mozillazg/go-unidecode"
 )
@@ -43,21 +41,16 @@ func main() {
 		slog.Warn("JWT_SECRET must be set", err)
 		return
 	}
-	tokenMaker, err := token.NewJWTMaker(secret)
-	if err != nil {
-		slog.Warn("failed to initialize tokenMaker", err)
-		return
-	}
 
-	hashUtil := hash.NewBcryptHasher()
 	ctx := context.Background()
 	slog.Info("initializing repository")
-	services := service.NewService(ctx, repo, tokenMaker, hashUtil, *cfg)
+	services := service.NewService(ctx, repo, *cfg)
 	slog.Info("initializing services")
 
 	dirFiles, err := os.ReadDir("images")
 	if err != nil {
-		panic(err)
+		slog.Error("failed to read images directory", err)
+		return
 	}
 	for _, file := range dirFiles {
 		fileName := file.Name()

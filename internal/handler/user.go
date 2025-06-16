@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/base64"
+	"fmt"
 	"log"
 	"regexp"
 	"strings"
@@ -15,27 +16,30 @@ import (
 func (h *Handler) SignUp(c *fiber.Ctx) error {
 	var request models.SignUpRequest
 	if err := c.BodyParser(&request); err != nil {
-		return c.Status(fiber.StatusBadRequest).SendString("failed to parse request")
+		return sendError(c, fiber.StatusBadRequest, "failed to parse request", err)
 	}
+
 	if len(request.Username) > 30 || len(request.Username) < 2 {
-		return c.Status(401).SendString("invalid username")
+		return sendError(c, fiber.StatusBadRequest, "invalid username length", fmt.Errorf("username must be between 2 and 30 characters"))
 	}
+
 	usernamePattern := regexp.MustCompile(`^[a-zA-Zа-яА-ЯёЁ]+(?: [a-zA-Zа-яА-ЯёЁ]+)*$`)
 	if !usernamePattern.MatchString(request.Username) {
-		return c.Status(402).SendString("username must contain only letters (latin or cyrillic)")
+		return sendError(c, fiber.StatusBadRequest, "invalid username format", fmt.Errorf("username must contain only letters (latin or cyrillic)"))
 	}
 
 	var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.(com|ru|org|net|edu|gov|info|biz|io|me|dev)$`)
-
 	if !emailRegex.MatchString(request.Email) {
-		return c.Status(fiber.StatusBadRequest).SendString("invalid email address format")
+		return sendError(c, fiber.StatusBadRequest, "invalid email format", fmt.Errorf("invalid email address format"))
 	}
+
 	if len(request.PasswordHash) < 6 {
-		return c.Status(403).SendString("invalid password")
+		return sendError(c, fiber.StatusBadRequest, "invalid password", fmt.Errorf("password must be at least 6 characters long"))
 	}
+
 	hashedPassword, err := h.hashUtil.HashPassword(request.PasswordHash)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).SendString("failed to hash password")
+		return sendError(c, fiber.StatusInternalServerError, "failed to hash password", err)
 	}
 
 	user := models.User{
@@ -45,7 +49,14 @@ func (h *Handler) SignUp(c *fiber.Ctx) error {
 	}
 
 	if err := h.service.UserService.AddUser(c.Context(), user); err != nil {
-		return c.Status(fiber.StatusInternalServerError).SendString("failed to add user")
+		return sendError(c, fiber.StatusInternalServerError, "failed to add user", err)
+	}
+
+	if err := h.service.SendToken(request.Email); err != nil {
+		if delErr := h.service.UserService.Delete(request.Email); delErr != nil {
+			return sendError(c, fiber.StatusInternalServerError, "failed to delete user after token error", delErr)
+		}
+		return sendError(c, fiber.StatusInternalServerError, "failed to send verification token", err)
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(map[string]string{"message": "user created successfully"})
@@ -54,29 +65,33 @@ func (h *Handler) SignUp(c *fiber.Ctx) error {
 func (h *Handler) SignIn(c *fiber.Ctx) error {
 	var request models.SignInRequest
 	if err := c.BodyParser(&request); err != nil {
-		return c.Status(fiber.StatusBadRequest).SendString("failed to parse request")
+		return sendError(c, fiber.StatusBadRequest, "failed to parse request", err)
 	}
 
 	userData, err := h.service.UserService.GetUser(c.Context(), request.Email)
 	if err != nil {
-		return c.Status(405).SendString("invalid email or password")
+		if err.Error() == "user is not verified" {
+			return sendError(c, fiber.StatusUnauthorized, "user is not verified", err)
+		}
+		return sendError(c, fiber.StatusUnauthorized, "invalid credentials", fmt.Errorf("invalid email or password"))
 	}
 
 	if !h.hashUtil.CheckPassword(userData.PasswordHash, request.PasswordHash) {
-		return c.Status(405).SendString("invalid email or password")
+		return sendError(c, fiber.StatusUnauthorized, "invalid credentials", fmt.Errorf("invalid email or password"))
 	}
 
 	token, err := h.TokenMaker.CreateToken(userData.ID)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).SendString("failed to create token")
+		return sendError(c, fiber.StatusInternalServerError, "failed to create token", err)
 	}
+
 	c.Cookie(&fiber.Cookie{
 		Name:     "token",
 		Value:    token,
 		Expires:  time.Now().Add(7 * 24 * time.Hour),
 		HTTPOnly: true,
-		Secure:   false, // true, если HTTPS
-		SameSite: "Lax", // или "None" при фронте на другом домене и HTTPS
+		Secure:   false,
+		SameSite: "Lax",
 		Path:     "/",
 	})
 
@@ -97,16 +112,17 @@ type SignInResponse struct {
 func (h *Handler) ChangeProfile(c *fiber.Ctx) error {
 	authHeader := c.Get("Authorization")
 	if authHeader == "" {
-		return c.Status(fiber.StatusUnauthorized).SendString("missing authorization header")
+		return sendError(c, fiber.StatusUnauthorized, "missing authorization header", fmt.Errorf("authorization header is required"))
 	}
-	if !strings.HasPrefix(authHeader, "Bearer ") {
-		return c.Status(fiber.StatusUnauthorized).SendString("invalid authorization header format")
-	}
-	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
 
+	if !strings.HasPrefix(authHeader, "Bearer ") {
+		return sendError(c, fiber.StatusUnauthorized, "invalid authorization header format", fmt.Errorf("authorization header must start with 'Bearer '"))
+	}
+
+	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
 	payload, err := h.TokenMaker.VerifyToken(tokenStr)
 	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).SendString("invalid or expired token")
+		return sendError(c, fiber.StatusUnauthorized, "invalid or expired token", err)
 	}
 
 	type incomingProfile struct {
@@ -117,14 +133,14 @@ func (h *Handler) ChangeProfile(c *fiber.Ctx) error {
 
 	var req incomingProfile
 	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).SendString("failed to parse request")
+		return sendError(c, fiber.StatusBadRequest, "failed to parse request", err)
 	}
 
 	var avatarBytes []byte
 	if req.Avatar != "" {
 		avatarBytes, err = base64.StdEncoding.DecodeString(req.Avatar)
 		if err != nil {
-			return c.Status(fiber.StatusBadRequest).SendString("invalid base64 avatar")
+			return sendError(c, fiber.StatusBadRequest, "invalid base64 avatar", err)
 		}
 	}
 
@@ -133,48 +149,65 @@ func (h *Handler) ChangeProfile(c *fiber.Ctx) error {
 
 	err = h.service.UserService.UpdateUserProfile(c.Context(), int(payload.UserID), req.Username, avatarBytes, req.UserBIO)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).SendString("failed to update profile: " + err.Error())
+		return sendError(c, fiber.StatusInternalServerError, "failed to update profile", err)
 	}
 
-	return c.Status(fiber.StatusOK).SendString("profile updated successfully")
+	return c.Status(fiber.StatusOK).JSON(map[string]string{"message": "profile updated successfully"})
 }
 
 func (h *Handler) GetUserProfile(c *fiber.Ctx) error {
 	authHeader := c.Get("Authorization")
 	if authHeader == "" {
-		return c.Status(fiber.StatusUnauthorized).SendString("missing authorization header")
+		return sendError(c, fiber.StatusUnauthorized, "missing authorization header", fmt.Errorf("authorization header is required"))
 	}
-	if !strings.HasPrefix(authHeader, "Bearer ") {
-		return c.Status(fiber.StatusUnauthorized).SendString("invalid authorization header format")
-	}
-	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
 
+	if !strings.HasPrefix(authHeader, "Bearer ") {
+		return sendError(c, fiber.StatusUnauthorized, "invalid authorization header format", fmt.Errorf("authorization header must start with 'Bearer '"))
+	}
+
+	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
 	payload, err := h.TokenMaker.VerifyToken(tokenStr)
 	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).SendString("invalid or expired token")
+		return sendError(c, fiber.StatusUnauthorized, "invalid or expired token", err)
 	}
 
 	profile, err := h.service.UserService.GetProfile(c.Context(), payload.UserID)
 	if err != nil {
-		log.Printf("Ошибка получения профиля пользователя (ID %d): %v", payload.UserID, err)
-		return c.Status(fiber.StatusInternalServerError).SendString("failed to get user profile: " + err.Error())
+		return sendError(c, fiber.StatusInternalServerError, "failed to get user profile", err)
 	}
+
 	return c.Status(fiber.StatusOK).JSON(profile)
 }
 
 func (h *Handler) JWTMiddleware(c *fiber.Ctx) error {
 	authHeader := c.Get("Authorization")
 	if authHeader == "" {
-		return c.Status(fiber.StatusUnauthorized).SendString("missing authorization header")
+		return sendError(c, fiber.StatusUnauthorized, "missing authorization header", fmt.Errorf("authorization header is required"))
 	}
-	if !strings.HasPrefix(authHeader, "Bearer ") {
-		return c.Status(fiber.StatusUnauthorized).SendString("invalid authorization header format")
-	}
-	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
 
+	if !strings.HasPrefix(authHeader, "Bearer ") {
+		return sendError(c, fiber.StatusUnauthorized, "invalid authorization header format", fmt.Errorf("authorization header must start with 'Bearer '"))
+	}
+
+	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
 	_, err := h.TokenMaker.VerifyToken(tokenStr)
 	if err != nil {
-		return c.Status(fiber.StatusUnauthorized).SendString("invalid or expired token")
+		return sendError(c, fiber.StatusUnauthorized, "invalid or expired token", err)
 	}
+
 	return c.Next()
+}
+
+func (h *Handler) Verify(c *fiber.Ctx) error {
+	token := c.Query("token")
+	if token == "" {
+		return sendError(c, fiber.StatusBadRequest, "missing token", fmt.Errorf("verification token is required"))
+	}
+
+	err := h.service.VerifyEmail(token)
+	if err != nil {
+		return sendError(c, fiber.StatusUnauthorized, "invalid or expired token", err)
+	}
+
+	return c.Status(fiber.StatusOK).JSON(map[string]string{"message": "email verified successfully"})
 }
