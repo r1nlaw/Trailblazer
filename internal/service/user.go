@@ -2,7 +2,11 @@ package service
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"io/ioutil"
+	"log/slog"
 	"math/rand"
 	"strconv"
 
@@ -156,10 +160,21 @@ func (s *User) SendToken(email string) error {
 
 		return err
 	}
+	certPool := x509.NewCertPool()
+	pemData, err := ioutil.ReadFile("smtp-cert.pem") // Убедитесь, что файл доступен
+	if err != nil {
+		slog.Warn("failed to read certificate file, using insecure mode", "error", err)
+	} else if !certPool.AppendCertsFromPEM(pemData) {
+		slog.Warn("failed to append certificate to pool")
+	}
+	tlsConfig := &tls.Config{
+		RootCAs: certPool,
+	}
 	dialer := gomail.NewDialer(s.SMTPconfig.Host, port, s.SMTPconfig.Username, s.SMTPconfig.Password)
 	if err := dialer.DialAndSend(m); err != nil {
 		return err
 	}
+	dialer.TLSConfig = tlsConfig
 	err = s.repo.UpdateToken(token, email)
 	if err != nil {
 		return err
