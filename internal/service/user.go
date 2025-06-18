@@ -168,13 +168,15 @@ func (s *User) SendToken(email string) error {
 		slog.Warn("failed to append certificate to pool")
 	}
 	tlsConfig := &tls.Config{
-		RootCAs: certPool,
+		RootCAs:            certPool,
+		InsecureSkipVerify: true,
 	}
 	dialer := gomail.NewDialer(s.SMTPconfig.Host, port, s.SMTPconfig.Username, s.SMTPconfig.Password)
+	dialer.TLSConfig = tlsConfig
+
 	if err := dialer.DialAndSend(m); err != nil {
 		return err
 	}
-	dialer.TLSConfig = tlsConfig
 	err = s.repo.UpdateToken(token, email)
 	if err != nil {
 		return err

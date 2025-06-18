@@ -17,6 +17,7 @@ COPY schema/* ./schema/
 COPY configs/* ./configs/
 COPY images/* ./images/
 COPY .env ./
+COPY smtp-cert.pem ./
 
 RUN chmod +x /app/main
 
