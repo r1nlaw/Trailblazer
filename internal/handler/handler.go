@@ -20,8 +20,8 @@ type Handler struct {
 	hashUtil   utils.Hasher
 }
 
-func NewHandler(service *service.Service, api api.WeatherAPI) *Handler {
-	return &Handler{service: service, api: api}
+func NewHandler(service *service.Service, api api.WeatherAPI, hashutil utils.Hasher, maker utils.Maker) *Handler {
+	return &Handler{service: service, api: api, TokenMaker: maker, hashUtil: hashutil}
 }
 
 func (h *Handler) InitRoutes(app *fiber.App) {

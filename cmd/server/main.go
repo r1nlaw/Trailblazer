@@ -59,7 +59,7 @@ func main() {
 	slog.Info("initializing repository")
 	services := service.NewService(ctx, repo, tokenMaker, hashUtil, *cfg)
 	slog.Info("initializing services")
-	handlers := handler.NewHandler(services, *api)
+	handlers := handler.NewHandler(services, *api, hashUtil, tokenMaker)
 	app := fiber.New()
 
 	handlers.InitRoutes(app)
